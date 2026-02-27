@@ -1,0 +1,82 @@
+<div class="space-y-6">
+  <header>
+    <h2 class="text-2xl font-black uppercase italic tracking-tight">
+      Catalogue <span class="text-yellow-400">Exercices</span>
+    </h2>
+  </header>
+
+  <!-- Search and Filters -->
+  <div class="space-y-4 sticky top-0 bg-black/50 backdrop-blur-md pt-2 pb-4 z-10">
+    <div class="relative">
+      <lucide-icon name="search" [size]="18" class="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500"></lucide-icon>
+      <input
+        type="text"
+        placeholder="Rechercher un exercice..."
+        [value]="search()"
+        (input)="onSearchChange($any($event.target).value)"
+        class="w-full bg-zinc-900 border border-zinc-800 rounded-2xl py-3 pl-12 pr-4 text-sm focus:border-yellow-400 outline-none transition-colors"
+      />
+    </div>
+
+    <div class="flex gap-2 overflow-x-auto pb-1">
+      @for (cat of categories; track cat) {
+        <button
+          (click)="setFilter(cat)"
+          [class]="cat === activeFilter()
+            ? 'px-4 py-2 rounded-full text-xs font-bold uppercase whitespace-nowrap border transition-all bg-yellow-400 border-yellow-400 text-black'
+            : 'px-4 py-2 rounded-full text-xs font-bold uppercase whitespace-nowrap border transition-all bg-zinc-900 border-zinc-800 text-zinc-400'"
+        >
+          {{ cat }}
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Grid -->
+  <div class="grid grid-cols-1 gap-4">
+    @for (exercise of filteredExercises(); track exercise.id) {
+      <div class="group relative h-48 rounded-3xl overflow-hidden border border-zinc-800">
+        <img
+          [src]="exercise.image"
+          [alt]="exercise.name"
+          class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          (error)="onImageError($event)"
+        />
+        <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
+
+        <button class="absolute top-4 right-4 w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:text-yellow-400 transition-colors">
+          <lucide-icon name="star" [size]="18"></lucide-icon>
+        </button>
+
+        <div class="absolute bottom-0 left-0 right-0 p-5">
+          <div class="flex justify-between items-end">
+            <div>
+              <div class="flex gap-2 mb-1">
+                <span class="bg-yellow-400/20 text-yellow-400 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">
+                  {{ exercise.category }}
+                </span>
+                <span class="bg-white/10 text-white text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">
+                  {{ exercise.level }}
+                </span>
+              </div>
+              <h3 class="text-xl font-black uppercase italic leading-none">{{ exercise.name }}</h3>
+            </div>
+
+            <button
+              (click)="startWorkout(exercise)"
+              class="w-12 h-12 bg-yellow-400 rounded-2xl flex items-center justify-center text-black shadow-[0_0_20px_rgba(250,204,21,0.3)] group-hover:scale-110 transition-transform"
+            >
+              <lucide-icon name="play" [size]="24"></lucide-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+
+  @if (filteredExercises().length === 0) {
+    <div class="py-20 text-center">
+      <p class="text-zinc-500">Aucun exercice trouvé...</p>
+    </div>
+  }
+</div>

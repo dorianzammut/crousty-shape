@@ -1,0 +1,84 @@
+<div class="space-y-8">
+  <header class="flex justify-between items-center">
+    <h2 class="text-2xl font-black uppercase italic tracking-tight">
+      Profil <span class="text-yellow-400">Personnel</span>
+    </h2>
+    <button class="text-zinc-500 hover:text-red-500 transition-colors">
+      <lucide-icon name="log-out" [size]="24"></lucide-icon>
+    </button>
+  </header>
+
+  <!-- Profile Info -->
+  <div class="flex flex-col items-center">
+    <div class="relative">
+      <div class="w-24 h-24 rounded-full bg-zinc-800 border-4 border-yellow-400 overflow-hidden shadow-[0_0_40px_rgba(250,204,21,0.2)]">
+        <img
+          src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=200&h=200&auto=format&fit=crop"
+          alt="Avatar"
+          class="w-full h-full object-cover"
+        />
+      </div>
+      <button class="absolute bottom-0 right-0 w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center text-black border-4 border-black">
+        <lucide-icon name="settings" [size]="14"></lucide-icon>
+      </button>
+    </div>
+    <h3 class="text-xl font-black mt-4 uppercase">Alex Crousty</h3>
+    <p class="text-zinc-500 text-sm">Membre Gold depuis Janvier 2026</p>
+  </div>
+
+  <!-- Stats Grid -->
+  <div class="grid grid-cols-3 gap-3">
+    @for (stat of stats; track stat.label) {
+      <div class="bg-zinc-900 p-4 rounded-2xl border border-zinc-800 text-center">
+        <lucide-icon [name]="stat.icon" [size]="20" class="mx-auto text-yellow-400 mb-2"></lucide-icon>
+        <div class="text-sm font-black">{{ stat.value }}</div>
+        <div class="text-[10px] text-zinc-500 uppercase font-bold mt-1">{{ stat.label }}</div>
+      </div>
+    }
+  </div>
+
+  <!-- Goal Progress -->
+  <div class="bg-zinc-900 p-6 rounded-3xl border border-zinc-800">
+    <div class="flex justify-between items-center mb-4">
+      <h4 class="font-bold text-sm uppercase">Objectif Trimestriel</h4>
+      <span class="text-yellow-400 font-black text-sm">65%</span>
+    </div>
+    <div class="h-3 bg-zinc-800 rounded-full overflow-hidden">
+      <div
+        class="h-full bg-yellow-400 rounded-full transition-all duration-1000 ease-out"
+        [style.width]="progressWidth"
+      ></div>
+    </div>
+    <p class="text-zinc-500 text-xs mt-3 text-center italic">Plus que 12 séances pour atteindre ton objectif de 80kg !</p>
+  </div>
+
+  <!-- Settings Menu -->
+  <div class="space-y-2">
+    @for (item of menuItems; track item.label) {
+      <button class="w-full bg-zinc-900/50 hover:bg-zinc-800 px-6 py-4 rounded-2xl flex justify-between items-center transition-all group">
+        <div class="flex items-center gap-3">
+          <lucide-icon [name]="item.icon" [size]="20" class="text-zinc-400 group-hover:text-yellow-400 transition-colors"></lucide-icon>
+          <span class="font-bold text-sm">{{ item.label }}</span>
+        </div>
+        <lucide-icon name="chevron-right" [size]="18" class="text-zinc-700"></lucide-icon>
+      </button>
+    }
+  </div>
+
+  <!-- Achievements -->
+  <div class="space-y-4">
+    <h4 class="font-bold text-xs uppercase tracking-widest text-zinc-500">Succès Débloqués</h4>
+    <div class="flex gap-4 overflow-x-auto pb-4">
+      @for (badge of badges; track badge.label) {
+        <div class="flex-shrink-0 flex flex-col items-center gap-2">
+          <div class="w-16 h-16 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center grayscale hover:grayscale-0 transition-all cursor-help">
+            <div class="w-10 h-10 rounded-full bg-yellow-400/20 flex items-center justify-center">
+              <lucide-icon name="heart" [size]="20" class="text-yellow-400"></lucide-icon>
+            </div>
+          </div>
+          <span class="text-[10px] font-bold text-zinc-500 uppercase">{{ badge.label }}</span>
+        </div>
+      }
+    </div>
+  </div>
+</div>

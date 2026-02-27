@@ -1,0 +1,80 @@
+// This is your Prisma schema file
+// https://www.prisma.io/docs/concepts/components/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  COACH
+  ADMIN
+}
+
+enum AlertSeverity {
+  MODERATE
+  CRITICAL
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions  Session[]
+  alerts    Alert[]
+}
+
+model Exercise {
+  id       String @id @default(uuid())
+  name     String
+  category String
+  level    String
+  imageUrl String?
+
+  sessions Session[]
+  alerts   Alert[]
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  exerciseId   String
+  reps         Int
+  qualityScore Float
+  duration     Int      // seconds
+  createdAt    DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id])
+  exercise Exercise @relation(fields: [exerciseId], references: [id])
+}
+
+model Program {
+  id        String   @id @default(uuid())
+  name      String
+  coach     String
+  level     String
+  duration  String
+  intensity String
+  createdAt DateTime @default(now())
+}
+
+model Alert {
+  id         String        @id @default(uuid())
+  userId     String
+  exerciseId String
+  message    String
+  severity   AlertSeverity
+  createdAt  DateTime      @default(now())
+
+  user     User     @relation(fields: [userId], references: [id])
+  exercise Exercise @relation(fields: [exerciseId], references: [id])
+}

@@ -1,0 +1,40 @@
+<div class="space-y-6">
+  <h2 class="text-2xl font-black uppercase italic tracking-tight">
+    Vue d'ensemble <span class="text-yellow-400">Dashboard</span>
+  </h2>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+    @for (stat of stats; track stat.label) {
+      <div class="bg-zinc-900 p-6 rounded-2xl border border-zinc-800 relative overflow-hidden hover:-translate-y-0.5 transition-transform">
+        <div class="absolute top-0 right-0 p-4 opacity-10">
+          <lucide-icon [name]="stat.icon" [size]="48"></lucide-icon>
+        </div>
+        <p class="text-zinc-500 text-xs font-bold uppercase tracking-wider mb-2">{{ stat.label }}</p>
+        <div class="flex items-end gap-2">
+          <span class="text-3xl font-black">{{ stat.value }}</span>
+          <span class="text-yellow-400 text-xs font-bold flex items-center mb-1">
+            <lucide-icon name="arrow-up-right" [size]="12"></lucide-icon>
+            {{ stat.change }}
+          </span>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Charts -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 bg-zinc-900 p-6 rounded-2xl border border-zinc-800">
+      <h3 class="font-bold mb-6">Croissance des Utilisateurs</h3>
+      <div class="h-56">
+        <canvas baseChart [type]="'line'" [data]="growthChartData" [options]="growthChartOptions"></canvas>
+      </div>
+    </div>
+    <div class="bg-zinc-900 p-6 rounded-2xl border border-zinc-800">
+      <h3 class="font-bold mb-6">Types d'Exercices</h3>
+      <div class="h-56">
+        <canvas baseChart [type]="'bar'" [data]="barChartData" [options]="barChartOptions"></canvas>
+      </div>
+    </div>
+  </div>
+</div>

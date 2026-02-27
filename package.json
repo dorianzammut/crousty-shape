@@ -1,0 +1,29 @@
+{
+  "name": "crousty-shape",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Crousty Shape — fitness app with AI motion analysis",
+  "scripts": {
+    "dev": "bash scripts/dev.sh",
+    "dev:mobile": "cd apps/mobile && ng serve",
+    "dev:admin": "cd apps/web-admin && ng serve --port 4201",
+    "dev:api": "cd apps/api && npm run start:dev",
+    "build:mobile": "cd apps/mobile && ng build",
+    "build:admin": "cd apps/web-admin && ng build",
+    "build:api": "cd apps/api && npm run build",
+    "build": "npm run build:mobile && npm run build:admin && npm run build:api",
+    "lint:mobile": "cd apps/mobile && ng lint",
+    "lint:admin": "cd apps/web-admin && ng lint",
+    "lint:api": "cd apps/api && npm run lint",
+    "test:api": "cd apps/api && npm run test"
+  },
+  "workspaces": [
+    "apps/mobile",
+    "apps/web-admin",
+    "apps/api"
+  ],
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  }
+}

@@ -1,0 +1,167 @@
+<!-- Finished State -->
+@if (status() === 'finished') {
+  <div class="flex flex-col h-[80vh] bg-zinc-900 rounded-3xl p-6 border border-zinc-800 overflow-y-auto">
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-2xl font-black uppercase italic">Rapport <span class="text-yellow-400">Séance</span></h2>
+      <button (click)="close()" class="p-2 bg-zinc-800 rounded-full text-zinc-400 hover:text-white transition-colors">
+        <lucide-icon name="x" [size]="20"></lucide-icon>
+      </button>
+    </div>
+
+    <div class="flex flex-col items-center gap-4 mb-8">
+      <div class="w-32 h-32 rounded-full border-8 border-yellow-400 flex flex-col items-center justify-center bg-zinc-800 shadow-[0_0_30px_rgba(250,204,21,0.2)]">
+        <span class="text-4xl font-black">{{ quality() }}%</span>
+        <span class="text-[10px] font-bold uppercase text-zinc-500">Qualité</span>
+      </div>
+      <p class="text-center font-medium">Excellente séance ! Tu as validé 10/10 répétitions avec une forme quasi parfaite.</p>
+    </div>
+
+    <div class="space-y-4 mb-8">
+      <div class="bg-zinc-800/50 p-4 rounded-2xl flex justify-between items-center">
+        <span class="text-zinc-400 text-sm">Exercice</span>
+        <span class="font-bold text-yellow-400 uppercase">{{ exercise?.name || 'Squat' }}</span>
+      </div>
+      <div class="bg-zinc-800/50 p-4 rounded-2xl flex justify-between items-center">
+        <span class="text-zinc-400 text-sm">Répétitions</span>
+        <span class="font-black text-2xl">10</span>
+      </div>
+      <div class="bg-zinc-800/50 p-4 rounded-2xl flex justify-between items-center">
+        <span class="text-zinc-400 text-sm">Temps total</span>
+        <span class="font-black text-2xl">0:32</span>
+      </div>
+    </div>
+
+    <div class="space-y-3 mb-8">
+      <h3 class="font-bold uppercase text-xs text-zinc-500 tracking-widest">Conseils Personnalisés</h3>
+      <div class="bg-yellow-400/10 border border-yellow-400/20 p-4 rounded-2xl flex gap-3">
+        <lucide-icon name="info" [size]="20" class="text-yellow-400 shrink-0 mt-0.5"></lucide-icon>
+        <p class="text-xs text-zinc-300 leading-relaxed">
+          Sur tes 3 dernières répétitions, tes genoux avaient tendance à rentrer vers l'intérieur. Pense à bien "ouvrir" le sol avec tes pieds pour maintenir l'alignement.
+        </p>
+      </div>
+    </div>
+
+    <div class="mt-auto space-y-3">
+      <button
+        (click)="close()"
+        class="w-full bg-yellow-400 py-4 rounded-2xl text-black font-black uppercase tracking-tighter hover:bg-yellow-300 transition-all"
+      >
+        Enregistrer la séance
+      </button>
+      <button
+        (click)="restartWorkout()"
+        class="w-full bg-zinc-800 py-4 rounded-2xl text-white font-black uppercase tracking-tighter hover:bg-zinc-700 transition-all flex items-center justify-center gap-2"
+      >
+        <lucide-icon name="refresh-cw" [size]="18"></lucide-icon>
+        Recommencer
+      </button>
+    </div>
+  </div>
+}
+
+<!-- Live Analysis State -->
+@if (status() !== 'finished') {
+  <div class="fixed inset-0 z-[60] bg-black flex flex-col">
+    <!-- Top Bar -->
+    <div class="absolute top-0 left-0 right-0 p-6 flex justify-between items-center z-10">
+      <button
+        (click)="close()"
+        class="w-10 h-10 bg-black/40 backdrop-blur-md border border-white/10 rounded-full flex items-center justify-center text-white"
+      >
+        <lucide-icon name="x" [size]="20"></lucide-icon>
+      </button>
+
+      <div class="bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 flex items-center gap-2">
+        <div class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+        <span class="text-xs font-bold uppercase tracking-widest">Live Analysis</span>
+      </div>
+
+      <button class="w-10 h-10 bg-black/40 backdrop-blur-md border border-white/10 rounded-full flex items-center justify-center text-white">
+        <lucide-icon name="refresh-cw" [size]="20"></lucide-icon>
+      </button>
+    </div>
+
+    <!-- Analysis View -->
+    <div class="flex-1 relative overflow-hidden bg-zinc-900">
+      <div class="absolute inset-0 grayscale opacity-40">
+        <img
+          src="https://images.unsplash.com/photo-1594381898411-846e7d193883?q=80&w=1000&auto=format&fit=crop"
+          class="w-full h-full object-cover"
+          alt="Gym background"
+        />
+      </div>
+
+      <canvas
+        #skeletonCanvas
+        width="400"
+        height="600"
+        class="absolute inset-0 w-full h-full pointer-events-none z-20"
+      ></canvas>
+
+      <div class="absolute bottom-32 left-0 right-0 p-6 z-30 flex flex-col items-center">
+        @if (lastRepQuality()) {
+          <div
+            [class]="'mb-4 px-6 py-2 rounded-full font-black uppercase italic tracking-wider text-2xl shadow-2xl ' + getRepQualityClass()"
+          >
+            {{ getRepQualityLabel() }}
+          </div>
+        }
+
+        <div class="bg-black/60 backdrop-blur-xl border border-white/10 p-4 rounded-3xl flex items-center gap-8 shadow-2xl">
+          <div class="text-center">
+            <div class="text-4xl font-black text-yellow-400 leading-none">{{ repCount() }}</div>
+            <div class="text-[10px] font-bold uppercase text-zinc-500 mt-1">Reps</div>
+          </div>
+          <div class="w-px h-10 bg-zinc-800"></div>
+          <div class="text-center">
+            <div class="text-4xl font-black leading-none">{{ quality() }}%</div>
+            <div class="text-[10px] font-bold uppercase text-zinc-500 mt-1">Score</div>
+          </div>
+        </div>
+
+        <p class="mt-6 text-center text-sm font-medium text-white bg-black/40 px-6 py-2 rounded-full backdrop-blur-sm">
+          {{ feedback() }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Bottom Controls -->
+    <div class="bg-black p-8 flex flex-col items-center gap-6">
+      @if (status() === 'waiting') {
+        <div class="flex flex-col items-center gap-4 w-full max-w-xs">
+          <button
+            (click)="startAnalysis()"
+            class="bg-yellow-400 text-black w-20 h-20 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(250,204,21,0.4)] hover:scale-105 transition-all"
+          >
+            <lucide-icon name="camera" [size]="32"></lucide-icon>
+          </button>
+          <p class="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Lancer l'analyse Live</p>
+
+          <div class="flex items-center gap-4 w-full mt-2">
+            <div class="h-px bg-zinc-800 flex-1"></div>
+            <span class="text-[10px] text-zinc-500 font-bold uppercase">Ou</span>
+            <div class="h-px bg-zinc-800 flex-1"></div>
+          </div>
+
+          <button class="w-full bg-zinc-900 border border-zinc-800 py-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-zinc-800 transition-colors">
+            <lucide-icon name="refresh-cw" [size]="16"></lucide-icon>
+            Analyser une vidéo (Galerie)
+          </button>
+        </div>
+      }
+
+      @if (status() === 'ready') {
+        <div class="text-yellow-400 font-black text-4xl animate-bounce italic">3...</div>
+      }
+
+      @if (status() === 'active') {
+        <button
+          (click)="finishWorkout()"
+          class="bg-red-500 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-tighter"
+        >
+          Terminer la série
+        </button>
+      }
+    </div>
+  </div>
+}

@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+.npm
+
+.vscode/
+.claude/
+
+# Build outputs
+dist/
+.angular/
+build/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Mobile (Capacitor)
+android/
+ios/
+*.apk
+*.ipa
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Logs
+*.log
+npm-debug.log*
+
+# Prisma
+prisma/*.db
+
+# Test coverage
+coverage/
