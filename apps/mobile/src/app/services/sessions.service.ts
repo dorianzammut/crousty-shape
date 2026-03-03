@@ -27,4 +27,8 @@ export class SessionsService {
   getStats() {
     return this.http.get<WeeklyStats>(`${environment.apiUrl}/sessions/stats`);
   }
+
+  create(data: { exerciseId: string; reps: number; qualityScore: number; duration: number }) {
+    return this.http.post<Session>(`${environment.apiUrl}/sessions`, data);
+  }
 }

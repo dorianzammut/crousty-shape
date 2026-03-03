@@ -1,3 +1,6 @@
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import * as bcrypt from 'bcrypt';
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
@@ -34,6 +37,19 @@ export class UsersService {
     return this.prisma.user.update({ where: { id }, data: dto, select: USER_SELECT });
   }
 
+  updateMe(userId: string, dto: { name?: string; email?: string }) {
+    return this.prisma.user.update({ where: { id: userId }, data: dto, select: USER_SELECT });
+  }
+
+  async changePassword(userId: string, dto: { currentPassword: string; newPassword: string }) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+    const valid = await bcrypt.compare(dto.currentPassword, user.password);
+    if (!valid) throw new ForbiddenException('Current password is incorrect');
+    const hash = await bcrypt.hash(dto.newPassword, 10);
+    return this.prisma.user.update({ where: { id: userId }, data: { password: hash }, select: USER_SELECT });
+  }
+  
   async remove(id: string) {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) throw new NotFoundException('User not found');

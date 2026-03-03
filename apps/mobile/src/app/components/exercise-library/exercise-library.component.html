@@ -18,14 +18,21 @@
       />
     </div>
 
-    <div class="flex gap-2 overflow-x-auto pb-1">
+    <div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
       @for (cat of categories; track cat) {
         <button
           (click)="setFilter(cat)"
           [class]="cat === activeFilter()
-            ? 'px-4 py-2 rounded-full text-xs font-bold uppercase whitespace-nowrap border transition-all bg-yellow-400 border-yellow-400 text-black'
-            : 'px-4 py-2 rounded-full text-xs font-bold uppercase whitespace-nowrap border transition-all bg-zinc-900 border-zinc-800 text-zinc-400'"
+            ? (cat === 'Favoris'
+                ? 'px-4 py-2 rounded-full text-xs font-bold uppercase whitespace-nowrap border transition-all bg-yellow-400 border-yellow-400 text-black flex items-center gap-1.5'
+                : 'px-4 py-2 rounded-full text-xs font-bold uppercase whitespace-nowrap border transition-all bg-yellow-400 border-yellow-400 text-black')
+            : (cat === 'Favoris'
+                ? 'px-4 py-2 rounded-full text-xs font-bold uppercase whitespace-nowrap border transition-all bg-zinc-900 border-zinc-800 text-yellow-400 flex items-center gap-1.5'
+                : 'px-4 py-2 rounded-full text-xs font-bold uppercase whitespace-nowrap border transition-all bg-zinc-900 border-zinc-800 text-zinc-400')"
         >
+          @if (cat === 'Favoris') {
+            <lucide-icon name="star" [size]="11"></lucide-icon>
+          }
           {{ cat }}
         </button>
       }
@@ -49,7 +56,13 @@
         }
         <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
 
-        <button class="absolute top-4 right-4 w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:text-yellow-400 transition-colors">
+        <button
+          (click)="toggleFavorite(exercise.id); $event.stopPropagation()"
+          [disabled]="togglingId() === exercise.id"
+          [class]="isFavorite(exercise.id)
+            ? 'absolute top-4 right-4 w-10 h-10 bg-yellow-400 rounded-full flex items-center justify-center text-black transition-all'
+            : 'absolute top-4 right-4 w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:text-yellow-400 transition-all'"
+        >
           <lucide-icon name="star" [size]="18"></lucide-icon>
         </button>
 
@@ -79,9 +92,16 @@
     }
   </div>
 
-  @if (filteredExercises().length === 0) {
+  @if (!loading() && filteredExercises().length === 0) {
     <div class="py-20 text-center">
-      <p class="text-zinc-500">Aucun exercice trouvé...</p>
+      @if (activeFilter() === 'Favoris') {
+        <div class="flex flex-col items-center gap-3">
+          <lucide-icon name="star" [size]="32" class="text-zinc-700"></lucide-icon>
+          <p class="text-zinc-500 text-sm">Aucun exercice en favori.<br>Appuie sur <lucide-icon name="star" [size]="12" class="inline text-yellow-400"></lucide-icon> pour en ajouter !</p>
+        </div>
+      } @else {
+        <p class="text-zinc-500">Aucun exercice trouvé...</p>
+      }
     </div>
   }
 </div>

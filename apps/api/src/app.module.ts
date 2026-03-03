@@ -9,6 +9,7 @@ import { ExercisesModule } from './exercises/exercises.module';
 import { SessionsModule } from './sessions/sessions.module';
 import { ProgramsModule } from './programs/programs.module';
 import { AlertsModule } from './alerts/alerts.module';
+import { FavoritesModule } from './favorites/favorites.module';
 import { FirebaseModule } from './firebase/firebase.module';
 import { UploadModule } from './upload/upload.module';
 
@@ -23,6 +24,7 @@ import { UploadModule } from './upload/upload.module';
     SessionsModule,
     ProgramsModule,
     AlertsModule,
+    FavoritesModule,
     UploadModule,
   ],
   controllers: [AppController],
