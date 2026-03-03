@@ -51,6 +51,7 @@ model Exercise {
   alerts           Alert[]
   favorites        Favorite[]
   programExercises ProgramExercise[]
+  createdBy        User?             @relation("CoachExercises", fields: [createdById], references: [id])
 }
 
 model Favorite {
@@ -63,9 +64,6 @@ model Favorite {
   exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
 
   @@unique([userId, exerciseId])
-  createdBy User?     @relation("CoachExercises", fields: [createdById], references: [id])
-  sessions  Session[]
-  alerts    Alert[]
 }
 
 model Session {

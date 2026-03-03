@@ -1,9 +1,6 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
-import { PrismaService } from '../prisma/prisma.service';
 import { Role } from '@prisma/client';
 
 const USER_SELECT = { id: true, email: true, name: true, role: true, createdAt: true, updatedAt: true };
