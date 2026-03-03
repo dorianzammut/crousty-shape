@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Param, Body, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Patch, Param, Body, UseGuards, Request, HttpCode, HttpStatus } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -9,6 +9,17 @@ export class UsersController {
 
   @Get('me')
   me(@Request() req: any) { return this.usersService.findOne(req.user.userId); }
+
+  @Patch('me')
+  updateMe(@Request() req: any, @Body() dto: { name?: string; email?: string }) {
+    return this.usersService.updateMe(req.user.userId, dto);
+  }
+
+  @Patch('me/password')
+  @HttpCode(HttpStatus.OK)
+  changePassword(@Request() req: any, @Body() dto: { currentPassword: string; newPassword: string }) {
+    return this.usersService.changePassword(req.user.userId, dto);
+  }
 
   @Get('stats')
   stats() { return this.usersService.getStats(); }

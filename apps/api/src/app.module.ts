@@ -9,6 +9,7 @@ import { ExercisesModule } from './exercises/exercises.module';
 import { SessionsModule } from './sessions/sessions.module';
 import { ProgramsModule } from './programs/programs.module';
 import { AlertsModule } from './alerts/alerts.module';
+import { FavoritesModule } from './favorites/favorites.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { AlertsModule } from './alerts/alerts.module';
     SessionsModule,
     ProgramsModule,
     AlertsModule,
+    FavoritesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -17,7 +17,7 @@ export class DashboardComponent implements OnInit {
   private auth = inject(AuthService);
   private sessionsService = inject(SessionsService);
 
-  userName = signal(this.auth.currentUser()?.email?.split('@')[0] ?? 'toi');
+  userName = signal(this.auth.currentUser()?.name || this.auth.currentUser()?.email?.split('@')[0] || 'toi');
   sessions = signal<Session[]>([]);
   loading = signal(true);
 

@@ -7,6 +7,7 @@ import { environment } from '../../environments/environment';
 export interface AuthUser {
   id: string;
   email: string;
+  name: string;
   role: string;
 }
 
@@ -37,6 +38,20 @@ export class AuthService {
     return this.http.post<AuthResponse>(`${environment.apiUrl}/auth/register`, { name, email, password }).pipe(
       tap(res => this.setSession(res))
     );
+  }
+
+  updateProfile(dto: { name?: string; email?: string }) {
+    return this.http.patch<AuthUser>(`${environment.apiUrl}/users/me`, dto).pipe(
+      tap(user => {
+        const updated = { ...this._user()!, ...user };
+        localStorage.setItem('user', JSON.stringify(updated));
+        this._user.set(updated);
+      })
+    );
+  }
+
+  changePassword(dto: { currentPassword: string; newPassword: string }) {
+    return this.http.patch(`${environment.apiUrl}/users/me/password`, dto);
   }
 
   logout() {

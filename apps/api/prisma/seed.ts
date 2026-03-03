@@ -30,17 +30,27 @@ async function main() {
     console.log('✅ Exercises seeded');
   }
 
-  // ── Programs ─────────────────────────────────────────────────────────────────
-  const programCount = await prisma.program.count();
-  if (programCount === 0) {
-    await prisma.program.createMany({
-      data: [
-        { name: 'Béton Armé',     coach: 'Coach Lucas', level: 'Avancé',        duration: '8 sem.', intensity: 'Haute' },
-        { name: 'Remise en Forme',coach: 'Coach Sarah', level: 'Débutant',      duration: '4 sem.', intensity: 'Moyenne' },
-        { name: 'Volume Explosif',coach: 'Coach Marc',  level: 'Intermédiaire', duration: '6 sem.', intensity: 'Élevée' },
-      ],
-    });
-    console.log('✅ Programs seeded');
+  // ── Demo sessions for admin user ────────────────────────────────────────────
+  const admin = await prisma.user.findUnique({ where: { email: 'admin@croustyshape.com' } });
+  const exercises = await prisma.exercise.findMany({ take: 5 });
+  const sessionCount = await prisma.session.count({ where: { userId: admin!.id } });
+
+  if (sessionCount === 0 && exercises.length > 0) {
+    const demoSessions = [
+      { exerciseId: exercises[0].id, reps: 15, qualityScore: 88, duration: 420, daysAgo: 0 },
+      { exerciseId: exercises[1].id, reps: 20, qualityScore: 74, duration: 600, daysAgo: 1 },
+      { exerciseId: exercises[2].id, reps: 8,  qualityScore: 92, duration: 900, daysAgo: 2 },
+      { exerciseId: exercises[3].id, reps: 12, qualityScore: 65, duration: 540, daysAgo: 4 },
+      { exerciseId: exercises[4].id, reps: 18, qualityScore: 81, duration: 480, daysAgo: 6 },
+    ];
+
+    for (const s of demoSessions) {
+      const createdAt = new Date(Date.now() - s.daysAgo * 24 * 60 * 60 * 1000);
+      await prisma.session.create({
+        data: { userId: admin!.id, exerciseId: s.exerciseId, reps: s.reps, qualityScore: s.qualityScore, duration: s.duration, createdAt },
+      });
+    }
+    console.log('✅ Demo sessions seeded');
   }
 
   console.log('🌱 Seed complete');

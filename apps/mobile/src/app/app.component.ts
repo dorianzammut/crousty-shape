@@ -31,6 +31,6 @@ export class AppComponent {
   }
 
   get showBottomNav(): boolean {
-    return !this.isWorkoutView && !this.isAuthView;
+    return !this.isWorkoutView && !this.isAuthView && this.currentRoute !== 'settings';
   }
 }

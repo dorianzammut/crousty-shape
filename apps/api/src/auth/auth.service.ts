@@ -18,7 +18,7 @@ export class AuthService {
     const user = await this.prisma.user.create({
       data: { email: dto.email, name: dto.name, password: hash },
     });
-    return this.signToken(user.id, user.email, user.role);
+    return this.signToken(user.id, user.email, user.name, user.role);
   }
 
   async login(dto: { email: string; password: string }) {
@@ -28,14 +28,14 @@ export class AuthService {
     const valid = await bcrypt.compare(dto.password, user.password);
     if (!valid) throw new UnauthorizedException('Invalid credentials');
 
-    return this.signToken(user.id, user.email, user.role);
+    return this.signToken(user.id, user.email, user.name, user.role);
   }
 
-  private signToken(userId: string, email: string, role: string) {
-    const payload = { sub: userId, email, role };
+  private signToken(userId: string, email: string, name: string, role: string) {
+    const payload = { sub: userId, email, name, role };
     return {
       access_token: this.jwt.sign(payload),
-      user: { id: userId, email, role },
+      user: { id: userId, email, name, role },
     };
   }
 }

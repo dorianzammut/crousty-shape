@@ -32,6 +32,8 @@ model User {
 
   sessions  Session[]
   alerts    Alert[]
+  favorites Favorite[]
+  programs  Program[]
 }
 
 model Exercise {
@@ -41,8 +43,22 @@ model Exercise {
   level    String
   imageUrl String?
 
-  sessions Session[]
-  alerts   Alert[]
+  sessions         Session[]
+  alerts           Alert[]
+  favorites        Favorite[]
+  programExercises ProgramExercise[]
+}
+
+model Favorite {
+  id         String   @id @default(uuid())
+  userId     String
+  exerciseId String
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, exerciseId])
 }
 
 model Session {
@@ -59,13 +75,28 @@ model Session {
 }
 
 model Program {
-  id        String   @id @default(uuid())
-  name      String
-  coach     String
-  level     String
-  duration  String
-  intensity String
-  createdAt DateTime @default(now())
+  id          String   @id @default(uuid())
+  userId      String
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercises ProgramExercise[]
+}
+
+model ProgramExercise {
+  id         String @id @default(uuid())
+  programId  String
+  exerciseId String
+  order      Int    @default(0)
+  sets       Int    @default(3)
+  reps       Int    @default(10)
+
+  program  Program  @relation(fields: [programId], references: [id], onDelete: Cascade)
+  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@unique([programId, exerciseId])
 }
 
 model Alert {
