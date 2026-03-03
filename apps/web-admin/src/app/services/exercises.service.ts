@@ -15,6 +15,9 @@ export interface Exercise {
   description?: string;
   imageUrl?: string;
   videoUrl?: string;
+  status?: string;
+  skeletonUrl?: string;
+  featuresUrl?: string;
   createdById?: string;
   createdBy?: { id: string; name: string };
 }
@@ -41,6 +44,10 @@ export class ExercisesService {
 
   update(id: string, dto: Partial<{ name: string; category: string; level: string; description: string; imageUrl: string; videoUrl: string }>) {
     return this.http.patch<Exercise>(`${environment.apiUrl}/exercises/${id}`, dto);
+  }
+
+  getSkeleton(id: string) {
+    return this.http.get<any>(`${environment.apiUrl}/exercises/${id}/skeleton`);
   }
 
   delete(id: string) {

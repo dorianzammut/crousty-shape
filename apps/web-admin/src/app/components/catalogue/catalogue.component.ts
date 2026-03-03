@@ -3,10 +3,11 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { ExercisesService, Exercise } from '../../services/exercises.service';
 import { EXERCISE_CATEGORIES, getCategoryLabel } from '../../constants/exercise-categories';
+import { SkeletonPlayerComponent } from '../skeleton-player/skeleton-player.component';
 
 @Component({
   selector: 'app-catalogue',
-  imports: [LucideAngularModule, FormsModule],
+  imports: [LucideAngularModule, FormsModule, SkeletonPlayerComponent],
   template: `
     <div class="space-y-6">
       <h2 class="text-2xl font-black uppercase italic tracking-tight">
@@ -70,9 +71,16 @@ import { EXERCISE_CATEGORIES, getCategoryLabel } from '../../constants/exercise-
                 @if (ex.description) {
                   <p class="text-xs text-zinc-400 mt-1 line-clamp-2">{{ ex.description }}</p>
                 }
-                <div class="flex items-center gap-2 mt-1">
+                <div class="flex items-center gap-2 mt-1 flex-wrap">
                   <span class="bg-yellow-400/20 text-yellow-400 px-2 py-0.5 rounded text-[10px] font-bold uppercase">{{ categoryLabel(ex.category) }}</span>
                   <span class="bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded text-[10px] font-bold uppercase">{{ ex.level }}</span>
+                  @if (ex.status === 'PROCESSING') {
+                    <span class="bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded text-[10px] font-bold uppercase animate-pulse">Analyse en cours...</span>
+                  } @else if (ex.status === 'READY') {
+                    <span class="bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded text-[10px] font-bold uppercase">Prêt</span>
+                  } @else if (ex.status === 'FAILED') {
+                    <span class="bg-red-500/20 text-red-400 px-2 py-0.5 rounded text-[10px] font-bold uppercase">Erreur</span>
+                  }
                 </div>
               </div>
               <div class="flex items-center gap-3">
@@ -120,7 +128,11 @@ import { EXERCISE_CATEGORIES, getCategoryLabel } from '../../constants/exercise-
             <img [src]="selectedExercise()!.imageUrl" [alt]="selectedExercise()!.name" class="w-full h-48 object-cover rounded-lg" />
           }
           @if (selectedExercise()?.videoUrl) {
-            <video [src]="selectedExercise()!.videoUrl" controls class="w-full rounded-lg"></video>
+            <app-skeleton-player
+              [videoUrl]="selectedExercise()!.videoUrl!"
+              [exerciseId]="selectedExercise()!.id"
+              [hasSkeletonUrl]="!!selectedExercise()!.skeletonUrl"
+            />
           }
 
           <div class="space-y-3">
