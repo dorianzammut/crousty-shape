@@ -6,7 +6,7 @@ import { firstValueFrom } from 'rxjs';
 const EXERCISE_SELECT = {
   id: true, name: true, category: true, level: true,
   description: true, imageUrl: true, videoUrl: true,
-  status: true, skeletonUrl: true, featuresUrl: true,
+  status: true, skeletonUrl: true, featuresUrl: true, repsUrl: true, templateUrl: true,
   createdById: true,
   createdBy: { select: { id: true, name: true } },
 };
@@ -71,6 +71,8 @@ export class ExercisesService {
       data.status = 'PROCESSING';
       data.skeletonUrl = null;
       data.featuresUrl = null;
+      data.repsUrl = null;
+      data.templateUrl = null;
     }
 
     const exercise = await this.prisma.exercise.update({
@@ -86,10 +88,12 @@ export class ExercisesService {
     return exercise;
   }
 
-  async completeProcessing(id: string, dto: { status: string; skeletonUrl?: string; featuresUrl?: string; error?: string }) {
+  async completeProcessing(id: string, dto: { status: string; skeletonUrl?: string; featuresUrl?: string; repsUrl?: string; templateUrl?: string; error?: string }) {
     const data: any = { status: dto.status };
     if (dto.skeletonUrl) data.skeletonUrl = dto.skeletonUrl;
     if (dto.featuresUrl) data.featuresUrl = dto.featuresUrl;
+    if (dto.repsUrl) data.repsUrl = dto.repsUrl;
+    if (dto.templateUrl) data.templateUrl = dto.templateUrl;
 
     return this.prisma.exercise.update({
       where: { id },

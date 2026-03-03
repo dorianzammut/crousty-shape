@@ -236,6 +236,16 @@ import { SkeletonPlayerComponent } from '../skeleton-player/skeleton-player.comp
                 <span class="bg-yellow-400/20 text-yellow-400 px-2 py-0.5 rounded text-xs font-bold uppercase">{{ categoryLabel(selectedExercise()?.category ?? '') }}</span>
                 <span class="bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded text-xs font-bold uppercase">{{ selectedExercise()?.level }}</span>
               </div>
+              @if (selectedExercise()?.status === 'READY') {
+                <div class="flex items-center gap-2 flex-wrap">
+                  @if (selectedExercise()?.templateUrl) {
+                    <span class="bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded text-xs font-bold uppercase">Template prêt</span>
+                  }
+                  @if (selectedExercise()?.repsUrl) {
+                    <span class="bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded text-xs font-bold uppercase">Reps analysées</span>
+                  }
+                </div>
+              }
               @if (selectedExercise()?.description) {
                 <p class="text-sm text-zinc-400">{{ selectedExercise()!.description }}</p>
               }

@@ -33,7 +33,7 @@ export class ExercisesController {
   @Post(':id/processing-complete')
   processingComplete(
     @Param('id') id: string,
-    @Body() dto: { status: string; skeletonUrl?: string; featuresUrl?: string; error?: string },
+    @Body() dto: { status: string; skeletonUrl?: string; featuresUrl?: string; repsUrl?: string; templateUrl?: string; error?: string },
   ) {
     return this.exercisesService.completeProcessing(id, dto);
   }

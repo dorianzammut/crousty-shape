@@ -6,6 +6,9 @@ import httpx
 from processing.video import download_video, read_frames
 from processing.pose import extract_skeleton
 from processing.features import compute_features
+from processing.reps import detect_reps, filter_reps
+from processing.normalize import normalize_reps
+from processing.template import build_template
 from processing.storage import upload_json
 
 logging.basicConfig(level=logging.INFO)
@@ -54,17 +57,40 @@ async def run_pipeline(exercise_id: str, video_url: str, callback_url: str):
         features = compute_features(skeleton)
         logger.info(f"Features computed: {len(features['frames'])} frames")
 
-        # 4. Upload results to Firebase Storage
+        # 4. Detect and filter reps
+        reps_data = detect_reps(features)
+        logger.info(f"Reps detected: {reps_data['total_reps_detected']} (primary angle: {reps_data['primary_angle']})")
+
+        reps_result = filter_reps(reps_data, features)
+        logger.info(f"Valid reps: {reps_result['valid_reps_count']}/{reps_result['total_reps_detected']}")
+
+        if reps_result["valid_reps_count"] == 0:
+            raise Exception("No valid repetitions detected. The video may not contain a clear cyclic movement.")
+
+        # 5. Normalize reps
+        normalized = normalize_reps(reps_result, features)
+        logger.info(f"Normalized {len(normalized)} reps to 100 points each")
+
+        # 6. Build template
+        template = build_template(normalized)
+        template["primary_angle"] = reps_result["primary_angle"]
+        logger.info(f"Template built from {template['n_reps_used']} reps")
+
+        # 7. Upload results to Firebase Storage
         skeleton_url = upload_json(skeleton, f"skeletons/{exercise_id}.json")
         features_url = upload_json(features, f"features/{exercise_id}.json")
+        reps_url = upload_json(reps_result, f"reps/{exercise_id}.json")
+        template_url = upload_json(template, f"templates/{exercise_id}.json")
         logger.info(f"Results uploaded for exercise {exercise_id}")
 
-        # 5. Callback to API
+        # 8. Callback to API
         async with httpx.AsyncClient() as client:
             await client.post(callback_url, json={
                 "status": "READY",
                 "skeletonUrl": skeleton_url,
                 "featuresUrl": features_url,
+                "repsUrl": reps_url,
+                "templateUrl": template_url,
             })
         logger.info(f"Processing complete for exercise {exercise_id}")
 

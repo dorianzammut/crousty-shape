@@ -18,6 +18,8 @@ export interface Exercise {
   status?: string;
   skeletonUrl?: string;
   featuresUrl?: string;
+  repsUrl?: string;
+  templateUrl?: string;
   createdById?: string;
   createdBy?: { id: string; name: string };
 }
