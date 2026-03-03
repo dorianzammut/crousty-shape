@@ -32,17 +32,22 @@ model User {
 
   sessions  Session[]
   alerts    Alert[]
+  exercises Exercise[] @relation("CoachExercises")
 }
 
 model Exercise {
-  id       String @id @default(uuid())
-  name     String
-  category String
-  level    String
-  imageUrl String?
+  id          String  @id @default(uuid())
+  name        String
+  category    String
+  level       String
+  description String?
+  imageUrl    String?
+  videoUrl    String?
+  createdById String?
 
-  sessions Session[]
-  alerts   Alert[]
+  createdBy User?     @relation("CoachExercises", fields: [createdById], references: [id])
+  sessions  Session[]
+  alerts    Alert[]
 }
 
 model Session {

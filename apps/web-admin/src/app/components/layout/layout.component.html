@@ -8,7 +8,7 @@
       </div>
       @if (sidebarOpen()) {
         <span class="font-black uppercase italic tracking-tighter text-lg">
-          Crousty <span class="text-yellow-400">Admin</span>
+          Crousty <span class="text-yellow-400">{{ currentUser()?.role === 'COACH' ? 'Coach' : 'Admin' }}</span>
         </span>
       }
     </div>
@@ -55,19 +55,7 @@
       </button>
 
       <div class="flex items-center gap-4">
-        <div class="relative">
-          <lucide-icon name="search" [size]="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"></lucide-icon>
-          <input
-            type="text"
-            placeholder="Rechercher..."
-            class="bg-zinc-800 rounded-lg py-2 pl-9 pr-4 text-sm w-56 focus:outline-none focus:ring-1 focus:ring-yellow-400 border-none"
-          />
-        </div>
-        <button class="relative p-2 text-zinc-400 hover:text-yellow-400 transition-colors">
-          <lucide-icon name="bell" [size]="18"></lucide-icon>
-          <span class="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-yellow-400 rounded-full"></span>
-        </button>
-        <div class="flex items-center gap-2 pl-4 border-l border-zinc-800">
+        <div class="flex items-center gap-2">
           <div class="w-8 h-8 rounded-full bg-yellow-400/20 border border-yellow-400/30 flex items-center justify-center">
             <lucide-icon name="user" [size]="14" class="text-yellow-400"></lucide-icon>
           </div>

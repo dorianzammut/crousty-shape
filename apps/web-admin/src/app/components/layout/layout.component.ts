@@ -20,13 +20,21 @@ export class LayoutComponent {
   sidebarOpen = signal(true);
   currentUser = this.auth.currentUser;
 
-  navItems: NavItem[] = [
-    { path: 'dashboard', label: 'Dashboard', icon: 'layout-dashboard' },
-    { path: 'users', label: 'Utilisateurs', icon: 'users' },
-    { path: 'sessions', label: 'Séances', icon: 'dumbbell' },
-    { path: 'alerts', label: 'Alertes', icon: 'alert-circle' },
-    { path: 'settings', label: 'Paramètres', icon: 'settings' },
-  ];
+  get navItems(): NavItem[] {
+    const role = this.currentUser()?.role;
+    if (role === 'COACH') {
+      return [
+        { path: 'my-exercises', label: 'Mes Exercices', icon: 'clipboard-list' },
+        { path: 'catalogue', label: 'Catalogue', icon: 'book-open' },
+      ];
+    }
+    return [
+      { path: 'dashboard', label: 'Dashboard', icon: 'layout-dashboard' },
+      { path: 'users', label: 'Utilisateurs', icon: 'users' },
+      { path: 'sessions', label: 'Séances', icon: 'dumbbell' },
+      { path: 'settings', label: 'Paramètres', icon: 'settings' },
+    ];
+  }
 
   toggleSidebar(): void {
     this.sidebarOpen.update(v => !v);
