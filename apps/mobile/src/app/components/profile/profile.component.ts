@@ -1,20 +1,8 @@
-import { Component, OnInit, ElementRef, ViewChild } from '@angular/core';
+import { Component, OnInit, signal, inject } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
-
-interface Stat {
-  label: string;
-  value: string;
-  icon: string;
-}
-
-interface MenuItem {
-  label: string;
-  icon: string;
-}
-
-interface Badge {
-  label: string;
-}
+import { Router } from '@angular/router';
+import { AuthService } from '../../services/auth.service';
+import { SessionsService } from '../../services/sessions.service';
 
 @Component({
   selector: 'app-profile',
@@ -22,32 +10,45 @@ interface Badge {
   templateUrl: './profile.component.html'
 })
 export class ProfileComponent implements OnInit {
-  @ViewChild('progressBar', { static: false }) progressBarRef!: ElementRef<HTMLDivElement>;
+  private auth = inject(AuthService);
+  private router = inject(Router);
+  private sessionsService = inject(SessionsService);
 
-  stats: Stat[] = [
-    { label: 'Poids', value: '78 kg', icon: 'scale' },
-    { label: 'Taille', value: '182 cm', icon: 'ruler' },
-    { label: 'Objectif', value: 'Prise de masse', icon: 'target' },
-  ];
+  user = this.auth.currentUser;
+  sessionCount = signal(0);
+  progressWidth = '0%';
 
-  menuItems: MenuItem[] = [
+  menuItems = [
     { label: 'Paramètres du compte', icon: 'settings' },
     { label: "Préférences d'entraînement", icon: 'heart' },
     { label: 'Historique des paiements', icon: 'chevron-right' },
   ];
 
-  badges: Badge[] = [
+  badges = [
     { label: 'Série de 7j' },
     { label: 'Lève-tôt' },
     { label: "Bras d'acier" },
     { label: 'Poids Plume' },
   ];
 
-  progressWidth = '0%';
+  ngOnInit() {
+    setTimeout(() => { this.progressWidth = '65%'; }, 300);
 
-  ngOnInit(): void {
-    setTimeout(() => {
-      this.progressWidth = '65%';
-    }, 300);
+    this.sessionsService.getMine().subscribe({
+      next: sessions => this.sessionCount.set(sessions.length),
+    });
+  }
+
+  logout() {
+    this.auth.logout();
+  }
+
+  get userInitial(): string {
+    const name = this.user()?.email ?? '';
+    return name.charAt(0).toUpperCase();
+  }
+
+  get userName(): string {
+    return this.user()?.email?.split('@')[0] ?? '';
   }
 }

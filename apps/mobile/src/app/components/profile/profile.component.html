@@ -3,7 +3,7 @@
     <h2 class="text-2xl font-black uppercase italic tracking-tight">
       Profil <span class="text-yellow-400">Personnel</span>
     </h2>
-    <button class="text-zinc-500 hover:text-red-500 transition-colors">
+    <button (click)="logout()" class="text-zinc-500 hover:text-red-500 transition-colors">
       <lucide-icon name="log-out" [size]="24"></lucide-icon>
     </button>
   </header>
@@ -11,30 +11,29 @@
   <!-- Profile Info -->
   <div class="flex flex-col items-center">
     <div class="relative">
-      <div class="w-24 h-24 rounded-full bg-zinc-800 border-4 border-yellow-400 overflow-hidden shadow-[0_0_40px_rgba(250,204,21,0.2)]">
-        <img
-          src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=200&h=200&auto=format&fit=crop"
-          alt="Avatar"
-          class="w-full h-full object-cover"
-        />
+      <div class="w-24 h-24 rounded-full bg-zinc-800 border-4 border-yellow-400 flex items-center justify-center shadow-[0_0_40px_rgba(250,204,21,0.2)]">
+        <span class="text-yellow-400 font-black text-3xl uppercase">{{ userInitial }}</span>
       </div>
-      <button class="absolute bottom-0 right-0 w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center text-black border-4 border-black">
-        <lucide-icon name="settings" [size]="14"></lucide-icon>
-      </button>
     </div>
-    <h3 class="text-xl font-black mt-4 uppercase">Alex Crousty</h3>
-    <p class="text-zinc-500 text-sm">Membre Gold depuis Janvier 2026</p>
+    <h3 class="text-xl font-black mt-4 uppercase">{{ userName }}</h3>
+    <p class="text-zinc-500 text-sm">{{ user()?.email }}</p>
+    <span class="mt-2 px-3 py-1 bg-yellow-400/10 border border-yellow-400/20 rounded-full text-yellow-400 text-[10px] font-bold uppercase">
+      {{ user()?.role }}
+    </span>
   </div>
 
   <!-- Stats Grid -->
-  <div class="grid grid-cols-3 gap-3">
-    @for (stat of stats; track stat.label) {
-      <div class="bg-zinc-900 p-4 rounded-2xl border border-zinc-800 text-center">
-        <lucide-icon [name]="stat.icon" [size]="20" class="mx-auto text-yellow-400 mb-2"></lucide-icon>
-        <div class="text-sm font-black">{{ stat.value }}</div>
-        <div class="text-[10px] text-zinc-500 uppercase font-bold mt-1">{{ stat.label }}</div>
-      </div>
-    }
+  <div class="grid grid-cols-2 gap-3">
+    <div class="bg-zinc-900 p-4 rounded-2xl border border-zinc-800 text-center">
+      <lucide-icon name="dumbbell" [size]="20" class="mx-auto text-yellow-400 mb-2"></lucide-icon>
+      <div class="text-2xl font-black">{{ sessionCount() }}</div>
+      <div class="text-[10px] text-zinc-500 uppercase font-bold mt-1">Séances</div>
+    </div>
+    <div class="bg-zinc-900 p-4 rounded-2xl border border-zinc-800 text-center">
+      <lucide-icon name="trending-up" [size]="20" class="mx-auto text-yellow-400 mb-2"></lucide-icon>
+      <div class="text-2xl font-black">0</div>
+      <div class="text-[10px] text-zinc-500 uppercase font-bold mt-1">Alertes posture</div>
+    </div>
   </div>
 
   <!-- Goal Progress -->
@@ -49,7 +48,7 @@
         [style.width]="progressWidth"
       ></div>
     </div>
-    <p class="text-zinc-500 text-xs mt-3 text-center italic">Plus que 12 séances pour atteindre ton objectif de 80kg !</p>
+    <p class="text-zinc-500 text-xs mt-3 text-center italic">Continue comme ça !</p>
   </div>
 
   <!-- Settings Menu -->

@@ -22,23 +22,15 @@ export class AppComponent {
     });
   }
 
-  get isAdminView(): boolean {
-    return this.currentRoute === 'admin';
-  }
-
   get isWorkoutView(): boolean {
     return this.currentRoute === 'workout';
   }
 
-  get showBottomNav(): boolean {
-    return !this.isWorkoutView && !this.isAdminView;
+  get isAuthView(): boolean {
+    return this.currentRoute === 'login' || this.currentRoute === 'register';
   }
 
-  toggleAdmin(): void {
-    if (this.isAdminView) {
-      this.router.navigate(['/']);
-    } else {
-      this.router.navigate(['/admin']);
-    }
+  get showBottomNav(): boolean {
+    return !this.isWorkoutView && !this.isAuthView;
   }
 }

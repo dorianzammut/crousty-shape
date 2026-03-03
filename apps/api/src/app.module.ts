@@ -8,6 +8,7 @@ import { UsersModule } from './users/users.module';
 import { ExercisesModule } from './exercises/exercises.module';
 import { SessionsModule } from './sessions/sessions.module';
 import { ProgramsModule } from './programs/programs.module';
+import { AlertsModule } from './alerts/alerts.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { ProgramsModule } from './programs/programs.module';
     ExercisesModule,
     SessionsModule,
     ProgramsModule,
+    AlertsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

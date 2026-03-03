@@ -7,6 +7,12 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 export class SessionsController {
   constructor(private readonly sessionsService: SessionsService) {}
 
+  @Get('mine')
+  mine(@Request() req: any) { return this.sessionsService.findByUser(req.user.userId); }
+
+  @Get('stats')
+  stats(@Request() req: any) { return this.sessionsService.getWeeklyStats(req.user.userId); }
+
   @Get()
   findAll() { return this.sessionsService.findAll(); }
 
