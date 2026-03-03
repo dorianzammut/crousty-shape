@@ -197,7 +197,7 @@
     <!-- Analysis View -->
     <div class="flex-1 relative overflow-hidden bg-zinc-900">
       @if (cameraAvailable()) {
-        <video #cameraVideo autoplay playsinline muted class="absolute inset-0 w-full h-full object-cover opacity-60"></video>
+        <video #cameraVideo autoplay playsinline muted class="absolute inset-0 w-full h-full object-cover"></video>
       } @else {
         <div class="absolute inset-0 bg-gradient-to-b from-zinc-800 to-zinc-950"></div>
         <div class="absolute inset-0 flex items-center justify-center">
@@ -247,13 +247,38 @@
           <p class="text-zinc-500 text-sm">
             Objectif : <span class="text-white font-bold">{{ targetReps() }} répétitions</span>
           </p>
+
+          <!-- Bouton caméra — désactivé si caméra ou modèle indisponible -->
           <button
             (click)="startAnalysis()"
-            class="bg-yellow-400 text-black w-20 h-20 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(250,204,21,0.4)] hover:scale-105 transition-all"
+            [disabled]="!poseReady || !cameraAvailable()"
+            class="w-20 h-20 rounded-full flex items-center justify-center transition-all"
+            [class.bg-yellow-400]="poseReady && cameraAvailable()"
+            [class.text-black]="poseReady && cameraAvailable()"
+            [class.shadow-[0_0_30px_rgba(250,204,21,0.4)]]="poseReady && cameraAvailable()"
+            [class.hover:scale-105]="poseReady && cameraAvailable()"
+            [class.bg-zinc-800]="!poseReady || !cameraAvailable()"
+            [class.text-zinc-600]="!poseReady || !cameraAvailable()"
+            [class.cursor-not-allowed]="!poseReady || !cameraAvailable()"
           >
-            <lucide-icon name="camera" [size]="32"></lucide-icon>
+            @if (poseLoading) {
+              <lucide-icon name="refresh-cw" [size]="32" class="animate-spin"></lucide-icon>
+            } @else {
+              <lucide-icon name="camera" [size]="32"></lucide-icon>
+            }
           </button>
-          <p class="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Lancer l'analyse Live</p>
+
+          @if (!cameraAvailable()) {
+            <p class="text-[10px] font-bold uppercase tracking-widest text-red-400">Caméra indisponible</p>
+          } @else if (poseLoading) {
+            <p class="text-[10px] font-bold uppercase tracking-widest text-yellow-400/60 animate-pulse">
+              Chargement du modèle IA...
+            </p>
+          } @else if (poseReady) {
+            <p class="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Lancer l'analyse Live</p>
+          } @else {
+            <p class="text-[10px] font-bold uppercase tracking-widest text-red-400">Modèle indisponible</p>
+          }
         </div>
       }
 

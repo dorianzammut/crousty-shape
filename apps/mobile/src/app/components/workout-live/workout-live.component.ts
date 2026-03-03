@@ -1,8 +1,10 @@
 import { Component, OnInit, OnDestroy, ElementRef, ViewChild, signal, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
+import { DrawingUtils, PoseLandmarker, PoseLandmarkerResult } from '@mediapipe/tasks-vision';
 import { NavigationService } from '../../services/navigation.service';
 import { SessionsService } from '../../services/sessions.service';
+import { PoseDetectionService } from '../../services/pose-detection.service';
 
 type WorkoutStatus = 'intro' | 'waiting' | 'ready' | 'active' | 'resting' | 'finished' | 'saving' | 'saved';
 type RepQuality = 'perfect' | 'good' | 'bad' | null;
@@ -27,12 +29,13 @@ export class WorkoutLiveComponent implements OnInit, OnDestroy {
 
   private router = inject(Router);
   private sessionsService = inject(SessionsService);
+  private poseService = inject(PoseDetectionService);
   navService = inject(NavigationService);
 
   // ── Workout state ──────────────────────────────────────────────────────────
   status = signal<WorkoutStatus>('intro');
-  repCount = signal(0);        // total reps done (all sets)
-  setRepCount = signal(0);     // reps done in current set
+  repCount = signal(0);
+  setRepCount = signal(0);
   currentSet = signal(1);
   targetSets = signal(3);
   targetReps = signal(10);
@@ -48,7 +51,7 @@ export class WorkoutLiveComponent implements OnInit, OnDestroy {
   private timerInterval: any;
   private restTimer: any;
   private animFrameId: number = 0;
-  private frame = 0;
+  private poseDetectionActive = false;
   private cameraStream: MediaStream | null = null;
 
   get exercise(): any { return this.navService.selectedExercise(); }
@@ -67,12 +70,19 @@ export class WorkoutLiveComponent implements OnInit, OnDestroy {
     return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
   }
 
-  ngOnInit(): void {}
+  get poseReady(): boolean { return this.poseService.isReady(); }
+  get poseLoading(): boolean { return this.poseService.isLoading(); }
+
+  ngOnInit(): void {
+    // Pre-load the model during intro so it's ready when the user starts
+    this.poseService.initialize().catch(err => console.warn('MediaPipe init failed:', err));
+  }
 
   ngOnDestroy(): void {
     clearInterval(this.repInterval);
     clearInterval(this.timerInterval);
     clearInterval(this.restTimer);
+    this.poseDetectionActive = false;
     cancelAnimationFrame(this.animFrameId);
     this.stopCamera();
   }
@@ -87,7 +97,7 @@ export class WorkoutLiveComponent implements OnInit, OnDestroy {
     this.setRepCount.set(0);
     this.status.set('waiting');
     this.initCamera();
-    setTimeout(() => this.startCanvasAnimation(), 100);
+    setTimeout(() => this.startPoseDetectionLoop(), 150);
   }
 
   // ── Camera ────────────────────────────────────────────────────────────────
@@ -113,6 +123,57 @@ export class WorkoutLiveComponent implements OnInit, OnDestroy {
   private stopCamera(): void {
     this.cameraStream?.getTracks().forEach(t => t.stop());
     this.cameraStream = null;
+  }
+
+  // ── MediaPipe pose detection ───────────────────────────────────────────────
+
+  private startPoseDetectionLoop(): void {
+    this.poseDetectionActive = true;
+    const loop = () => {
+      if (!this.poseDetectionActive) return;
+      const video = this.cameraVideoRef?.nativeElement;
+      if (video && video.readyState >= 2) {
+        const canvas = this.canvasRef?.nativeElement;
+        if (canvas) {
+          if (video.videoWidth > 0 && canvas.width !== video.videoWidth) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+          }
+          const result = this.poseService.detectForVideo(video, performance.now());
+          if (result) this.drawPoseResult(result);
+        }
+      }
+      this.animFrameId = requestAnimationFrame(loop);
+    };
+    this.animFrameId = requestAnimationFrame(loop);
+  }
+
+  private drawPoseResult(result: PoseLandmarkerResult): void {
+    const canvas = this.canvasRef?.nativeElement;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (!result.landmarks.length) return;
+
+    const color = this.status() === 'active'
+      ? (this.lastRepQuality() === 'bad' ? '#ef4444' : '#facc15')
+      : '#71717a';
+
+    const drawingUtils = new DrawingUtils(ctx);
+    for (const landmarks of result.landmarks) {
+      drawingUtils.drawConnectors(landmarks, PoseLandmarker.POSE_CONNECTIONS, {
+        color,
+        lineWidth: 3,
+      });
+      drawingUtils.drawLandmarks(landmarks, {
+        radius: 5,
+        color,
+        fillColor: color + '40',
+      });
+    }
   }
 
   // ── Workout flow ──────────────────────────────────────────────────────────
@@ -148,16 +209,15 @@ export class WorkoutLiveComponent implements OnInit, OnDestroy {
       }
       setTimeout(() => this.lastRepQuality.set(null), 1000);
 
-      // Set complete?
       if (this.setRepCount() >= this.targetReps()) {
         clearInterval(this.repInterval);
         if (this.currentSet() >= this.targetSets()) {
-          // All sets done → finish
           clearInterval(this.timerInterval);
           this.stopCamera();
+          this.poseDetectionActive = false;
+          cancelAnimationFrame(this.animFrameId);
           this.status.set('finished');
         } else {
-          // Rest between sets
           this.status.set('resting');
           this.startRestTimer();
         }
@@ -188,58 +248,9 @@ export class WorkoutLiveComponent implements OnInit, OnDestroy {
     clearInterval(this.timerInterval);
     clearInterval(this.restTimer);
     this.stopCamera();
+    this.poseDetectionActive = false;
+    cancelAnimationFrame(this.animFrameId);
     this.status.set('finished');
-  }
-
-  // ── Canvas animation ──────────────────────────────────────────────────────
-
-  private startCanvasAnimation(): void {
-    const canvas = this.canvasRef?.nativeElement;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const animate = () => {
-      this.frame++;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      const st = this.status();
-      if (st === 'waiting' || st === 'ready' || st === 'active') {
-        const time = this.frame * 0.05;
-        const offset = Math.sin(time) * 20;
-
-        ctx.strokeStyle = st === 'active'
-          ? (this.lastRepQuality() === 'bad' ? '#ef4444' : '#facc15')
-          : '#71717a';
-        ctx.lineWidth = 4;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-
-        const w = canvas.width, h = canvas.height;
-        const cx = w / 2, cy = h / 2;
-
-        ctx.beginPath(); ctx.arc(cx + offset * 0.1, cy - 100 + offset * 0.2, 20, 0, Math.PI * 2); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(cx + offset * 0.1, cy - 80 + offset * 0.2); ctx.lineTo(cx + offset * 0.2, cy + 20 + offset * 0.3); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(cx - 40, cy - 70 + offset * 0.2); ctx.lineTo(cx + 40, cy - 70 + offset * 0.2); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(cx - 40, cy - 70 + offset * 0.2); ctx.lineTo(cx - 80, cy - 20 + Math.sin(time) * 40); ctx.lineTo(cx - 100, cy + 30 + Math.sin(time) * 20); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(cx + 40, cy - 70 + offset * 0.2); ctx.lineTo(cx + 80, cy - 20 + Math.sin(time) * 40); ctx.lineTo(cx + 100, cy + 30 + Math.sin(time) * 20); ctx.stroke();
-        const squat = Math.max(0, Math.sin(time) * 40);
-        ctx.beginPath(); ctx.moveTo(cx - 20, cy + 20 + offset * 0.3); ctx.lineTo(cx - 40, cy + 80 - squat); ctx.lineTo(cx - 50, cy + 160); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(cx + 20, cy + 20 + offset * 0.3); ctx.lineTo(cx + 40, cy + 80 - squat); ctx.lineTo(cx + 50, cy + 160); ctx.stroke();
-
-        const points: [number, number][] = [
-          [cx + offset * 0.1, cy - 100 + offset * 0.2],
-          [cx - 40, cy - 70 + offset * 0.2], [cx + 40, cy - 70 + offset * 0.2],
-          [cx - 80, cy - 20 + Math.sin(time) * 40], [cx + 80, cy - 20 + Math.sin(time) * 40],
-          [cx - 20, cy + 20 + offset * 0.3], [cx + 20, cy + 20 + offset * 0.3],
-        ];
-        ctx.fillStyle = ctx.strokeStyle;
-        points.forEach(([px, py]) => { ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI * 2); ctx.fill(); });
-      }
-
-      this.animFrameId = requestAnimationFrame(animate);
-    };
-    this.animFrameId = requestAnimationFrame(animate);
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
@@ -295,8 +306,8 @@ export class WorkoutLiveComponent implements OnInit, OnDestroy {
     clearInterval(this.repInterval);
     clearInterval(this.timerInterval);
     clearInterval(this.restTimer);
+    this.poseDetectionActive = false;
     cancelAnimationFrame(this.animFrameId);
-    this.frame = 0;
     this.stopCamera();
     this.repCount.set(0);
     this.setRepCount.set(0);
@@ -321,6 +332,8 @@ export class WorkoutLiveComponent implements OnInit, OnDestroy {
     clearInterval(this.repInterval);
     clearInterval(this.timerInterval);
     clearInterval(this.restTimer);
+    this.poseDetectionActive = false;
+    cancelAnimationFrame(this.animFrameId);
     const step = this.navService.programRunStep();
     this.targetSets.set(step?.sets ?? 3);
     this.targetReps.set(step?.reps ?? 10);
@@ -334,12 +347,14 @@ export class WorkoutLiveComponent implements OnInit, OnDestroy {
     this.lastRepQuality.set(null);
     this.saveError.set(false);
     this.initCamera();
-    setTimeout(() => this.startCanvasAnimation(), 100);
+    setTimeout(() => this.startPoseDetectionLoop(), 150);
     this.status.set('waiting');
   }
 
   close(): void {
     this.stopCamera();
+    this.poseDetectionActive = false;
+    cancelAnimationFrame(this.animFrameId);
     const wasProgramRun = this.navService.isProgramRunActive();
     this.navService.endProgramRun();
     this.router.navigate([wasProgramRun ? '/programs' : '/']);
