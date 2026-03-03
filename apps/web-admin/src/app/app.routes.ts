@@ -32,6 +32,14 @@ export const routes: Routes = [
         path: 'settings',
         loadComponent: () => import('./components/settings/settings.component').then(m => m.SettingsComponent)
       },
+      {
+        path: 'my-exercises',
+        loadComponent: () => import('./components/my-exercises/my-exercises.component').then(m => m.MyExercisesComponent)
+      },
+      {
+        path: 'catalogue',
+        loadComponent: () => import('./components/catalogue/catalogue.component').then(m => m.CatalogueComponent)
+      },
     ]
   },
   { path: '**', redirectTo: '' }

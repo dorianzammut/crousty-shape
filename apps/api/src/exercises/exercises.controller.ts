@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, Request } from '@nestjs/common';
 import { ExercisesService } from './exercises.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -9,12 +9,23 @@ export class ExercisesController {
   @Get()
   findAll() { return this.exercisesService.findAll(); }
 
+  @Get('categories')
+  categories() { return this.exercisesService.getCategories(); }
+
+  @Get('mine')
+  @UseGuards(JwtAuthGuard)
+  mine(@Request() req: any) {
+    return this.exercisesService.findByCreator(req.user.userId);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) { return this.exercisesService.findOne(id); }
 
   @Post()
   @UseGuards(JwtAuthGuard)
-  create(@Body() dto: any) { return this.exercisesService.create(dto); }
+  create(@Body() dto: any, @Request() req: any) {
+    return this.exercisesService.create(dto, req.user.userId);
+  }
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
@@ -22,5 +33,7 @@ export class ExercisesController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
-  remove(@Param('id') id: string) { return this.exercisesService.remove(id); }
+  remove(@Param('id') id: string, @Request() req: any) {
+    return this.exercisesService.remove(id, req.user.userId, req.user.role);
+  }
 }

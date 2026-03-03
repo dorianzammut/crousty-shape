@@ -9,17 +9,21 @@ import { ExercisesModule } from './exercises/exercises.module';
 import { SessionsModule } from './sessions/sessions.module';
 import { ProgramsModule } from './programs/programs.module';
 import { AlertsModule } from './alerts/alerts.module';
+import { FirebaseModule } from './firebase/firebase.module';
+import { UploadModule } from './upload/upload.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
+    FirebaseModule,
     AuthModule,
     UsersModule,
     ExercisesModule,
     SessionsModule,
     ProgramsModule,
     AlertsModule,
+    UploadModule,
   ],
   controllers: [AppController],
   providers: [AppService],

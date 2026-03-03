@@ -30,7 +30,7 @@ export class AuthService {
   login(email: string, password: string) {
     return this.http.post<AuthResponse>(`${environment.apiUrl}/auth/login`, { email, password }).pipe(
       tap(res => {
-        if (res.user.role !== 'ADMIN') throw new Error('Accès réservé aux administrateurs');
+        if (res.user.role !== 'ADMIN' && res.user.role !== 'COACH') throw new Error('Accès réservé aux administrateurs et coachs');
         this.setSession(res);
       })
     );
