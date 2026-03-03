@@ -8,30 +8,6 @@
     </button>
   </header>
 
-  <!-- Custom Programs -->
-  <div class="space-y-4">
-    <h3 class="font-bold text-xs uppercase tracking-widest text-zinc-500">Mes Séances</h3>
-
-    <div class="grid grid-cols-1 gap-3">
-      @for (prog of customPrograms; track prog.name) {
-        <div class="bg-zinc-900 p-5 rounded-2xl border border-zinc-800 flex justify-between items-center group cursor-pointer hover:border-zinc-700 active:scale-[0.98] transition-all">
-          <div>
-            <h4 class="font-bold text-lg">{{ prog.name }}</h4>
-            <p class="text-zinc-500 text-xs">{{ prog.exercises }} exercices • Fait {{ prog.lastDone }}</p>
-          </div>
-          <div class="w-10 h-10 bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-500 group-hover:text-yellow-400 transition-colors">
-            <lucide-icon name="chevron-right" [size]="20"></lucide-icon>
-          </div>
-        </div>
-      }
-
-      <button class="w-full border-2 border-dashed border-zinc-800 rounded-2xl p-5 flex flex-col items-center gap-2 text-zinc-500 hover:border-yellow-400 hover:text-yellow-400 transition-all">
-        <lucide-icon name="plus" [size]="24"></lucide-icon>
-        <span class="font-bold text-xs uppercase">Créer une séance personnalisée</span>
-      </button>
-    </div>
-  </div>
-
   <!-- Coach Library -->
   <div class="space-y-4">
     <div class="flex items-center gap-2">
@@ -39,8 +15,12 @@
       <h3 class="font-bold text-xs uppercase tracking-widest text-zinc-500">Bibliothèque des Coachs</h3>
     </div>
 
+    @if (loading()) {
+      <div class="py-10 text-center text-zinc-500 text-sm">Chargement des programmes...</div>
+    }
+
     <div class="space-y-4">
-      @for (prog of coachPrograms; track prog.id) {
+      @for (prog of coachPrograms(); track prog.id) {
         <div class="relative bg-zinc-900 rounded-3xl p-6 border border-zinc-800 overflow-hidden group">
           <div class="absolute top-0 right-0 w-32 h-32 bg-yellow-400/5 blur-3xl rounded-full -mr-10 -mt-10 group-hover:bg-yellow-400/10 transition-colors"></div>
 

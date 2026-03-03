@@ -5,14 +5,10 @@
       <h1 class="text-3xl font-black italic text-white uppercase tracking-tighter">
         Crousty <span class="text-yellow-400">Shape</span>
       </h1>
-      <p class="text-zinc-500 text-sm mt-1">Prêt pour ta séance, Alex ?</p>
+      <p class="text-zinc-500 text-sm mt-1">Prêt pour ta séance, {{ userName() }} ?</p>
     </div>
-    <div class="w-12 h-12 rounded-full bg-zinc-800 border-2 border-yellow-400 flex items-center justify-center overflow-hidden">
-      <img
-        src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=200&h=200&auto=format&fit=crop"
-        alt="Profile"
-        class="w-full h-full object-cover"
-      />
+    <div class="w-12 h-12 rounded-full bg-zinc-800 border-2 border-yellow-400 flex items-center justify-center text-yellow-400 font-black text-lg uppercase">
+      {{ userName().charAt(0) }}
     </div>
   </header>
 
@@ -23,17 +19,17 @@
         <lucide-icon name="trending-up" [size]="18"></lucide-icon>
         <span class="text-xs font-bold uppercase tracking-wider">Volume</span>
       </div>
-      <div class="text-2xl font-black">1.2k</div>
-      <p class="text-zinc-500 text-xs">répétitions cette semaine</p>
+      <div class="text-2xl font-black">{{ totalReps }}</div>
+      <p class="text-zinc-500 text-xs">répétitions au total</p>
     </div>
 
     <div class="bg-zinc-900 p-4 rounded-2xl border border-zinc-800 hover:scale-[1.02] transition-transform">
       <div class="flex items-center gap-2 text-yellow-400 mb-2">
         <lucide-icon name="award" [size]="18"></lucide-icon>
-        <span class="text-xs font-bold uppercase tracking-wider">Record</span>
+        <span class="text-xs font-bold uppercase tracking-wider">Séances</span>
       </div>
-      <div class="text-2xl font-black">120kg</div>
-      <p class="text-zinc-500 text-xs">Squat (Nouveau record !)</p>
+      <div class="text-2xl font-black">{{ sessions().length }}</div>
+      <p class="text-zinc-500 text-xs">séances enregistrées</p>
     </div>
   </div>
 
@@ -41,10 +37,7 @@
   <div class="bg-zinc-900 p-5 rounded-3xl border border-zinc-800">
     <div class="flex justify-between items-center mb-6">
       <h3 class="font-bold text-lg">Progression</h3>
-      <select class="bg-transparent text-xs text-yellow-400 font-bold uppercase border-none focus:outline-none">
-        <option>7 derniers jours</option>
-        <option>30 derniers jours</option>
-      </select>
+      <span class="text-xs text-yellow-400 font-bold uppercase">7 derniers jours</span>
     </div>
     <div class="h-48 w-full">
       <canvas baseChart
@@ -55,31 +48,36 @@
     </div>
   </div>
 
-  <!-- Recent History -->
+  <!-- Recent Sessions -->
   <div class="space-y-4">
-    <div class="flex justify-between items-center">
-      <h3 class="font-bold text-lg uppercase tracking-tight">Séances Récentes</h3>
-      <button class="text-yellow-400 text-xs font-bold uppercase hover:underline">Voir tout</button>
-    </div>
+    <h3 class="font-bold text-lg uppercase tracking-tight">Séances Récentes</h3>
 
-    <div class="space-y-3">
-      @for (session of sessions; track session.title) {
-        <div class="bg-zinc-900/50 p-4 rounded-2xl border border-zinc-800/50 flex items-center gap-4 group cursor-pointer hover:border-zinc-700 active:scale-[0.98] transition-all">
-          <div class="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center text-yellow-400 group-hover:bg-yellow-400 group-hover:text-black transition-colors">
-            <lucide-icon name="calendar" [size]="24"></lucide-icon>
+    @if (loading()) {
+      <div class="py-10 text-center text-zinc-500 text-sm">Chargement...</div>
+    } @else if (sessions().length === 0) {
+      <div class="py-10 text-center text-zinc-500 text-sm">
+        Aucune séance pour l'instant.<br>Lance ton premier entraînement !
+      </div>
+    } @else {
+      <div class="space-y-3">
+        @for (session of sessions(); track session.id) {
+          <div class="bg-zinc-900/50 p-4 rounded-2xl border border-zinc-800/50 flex items-center gap-4 group cursor-pointer hover:border-zinc-700 active:scale-[0.98] transition-all">
+            <div class="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center text-yellow-400 group-hover:bg-yellow-400 group-hover:text-black transition-colors">
+              <lucide-icon name="calendar" [size]="24"></lucide-icon>
+            </div>
+            <div class="flex-1">
+              <h4 class="font-bold text-sm">{{ session.exercise.name }}</h4>
+              <p class="text-zinc-500 text-xs">{{ formatDate(session.createdAt) }} • {{ session.reps }} rép.</p>
+            </div>
+            <div class="text-right">
+              <div class="text-yellow-400 font-black">{{ session.qualityScore | number:'1.0-0' }}%</div>
+              <div class="text-[10px] text-zinc-500 uppercase">Qualité</div>
+            </div>
+            <lucide-icon name="chevron-right" [size]="16" class="text-zinc-700"></lucide-icon>
           </div>
-          <div class="flex-1">
-            <h4 class="font-bold text-sm">{{ session.title }}</h4>
-            <p class="text-zinc-500 text-xs">{{ session.date }} • {{ session.reps }} répétitions</p>
-          </div>
-          <div class="text-right">
-            <div class="text-yellow-400 font-black">{{ session.score }}%</div>
-            <div class="text-[10px] text-zinc-500 uppercase">Score Qualité</div>
-          </div>
-          <lucide-icon name="chevron-right" [size]="16" class="text-zinc-700"></lucide-icon>
-        </div>
-      }
-    </div>
+        }
+      </div>
+    }
   </div>
 
   <!-- Call to Action -->

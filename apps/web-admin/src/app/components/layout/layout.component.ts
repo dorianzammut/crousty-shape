@@ -1,6 +1,7 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, inject } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
+import { AuthService } from '../../services/auth.service';
 
 interface NavItem {
   path: string;
@@ -14,7 +15,10 @@ interface NavItem {
   templateUrl: './layout.component.html'
 })
 export class LayoutComponent {
+  private auth = inject(AuthService);
+
   sidebarOpen = signal(true);
+  currentUser = this.auth.currentUser;
 
   navItems: NavItem[] = [
     { path: 'dashboard', label: 'Dashboard', icon: 'layout-dashboard' },
@@ -26,5 +30,14 @@ export class LayoutComponent {
 
   toggleSidebar(): void {
     this.sidebarOpen.update(v => !v);
+  }
+
+  userLabel(): string {
+    const email = this.currentUser()?.email;
+    return email ? email.split('@')[0] : '';
+  }
+
+  logout(): void {
+    this.auth.logout();
   }
 }

@@ -1,34 +1,30 @@
-import { Component } from '@angular/core';
+import { Component, signal, inject, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { DecimalPipe } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
 import { BaseChartDirective } from 'ng2-charts';
 import { ChartData, ChartOptions } from 'chart.js';
-
-interface Session {
-  title: string;
-  date: string;
-  score: number;
-  reps: number;
-}
+import { AuthService } from '../../services/auth.service';
+import { SessionsService, Session } from '../../services/sessions.service';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [LucideAngularModule, BaseChartDirective],
+  imports: [LucideAngularModule, BaseChartDirective, DecimalPipe],
   templateUrl: './dashboard.component.html'
 })
-export class DashboardComponent {
-  constructor(private router: Router) {}
+export class DashboardComponent implements OnInit {
+  private router = inject(Router);
+  private auth = inject(AuthService);
+  private sessionsService = inject(SessionsService);
 
-  sessions: Session[] = [
-    { title: 'Full Body A', date: 'Hier', score: 92, reps: 450 },
-    { title: 'Push Day', date: '2 fév.', score: 88, reps: 380 },
-    { title: 'Leg Day', date: '30 janv.', score: 95, reps: 520 },
-  ];
+  userName = signal(this.auth.currentUser()?.email?.split('@')[0] ?? 'toi');
+  sessions = signal<Session[]>([]);
+  loading = signal(true);
 
   chartData: ChartData<'line'> = {
     labels: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
     datasets: [{
-      data: [120, 150, 180, 140, 210, 190, 250],
+      data: [0, 0, 0, 0, 0, 0, 0],
       borderColor: '#facc15',
       borderWidth: 3,
       backgroundColor: 'rgba(250, 204, 21, 0.15)',
@@ -62,11 +58,38 @@ export class DashboardComponent {
     }
   };
 
-  goToExercises(): void {
-    this.router.navigate(['/exercises']);
+  ngOnInit() {
+    this.sessionsService.getMine().subscribe({
+      next: sessions => {
+        this.sessions.set(sessions.slice(0, 5));
+        this.loading.set(false);
+      },
+      error: () => this.loading.set(false),
+    });
+
+    this.sessionsService.getStats().subscribe({
+      next: stats => {
+        this.chartData = {
+          ...this.chartData,
+          labels: stats.labels,
+          datasets: [{ ...this.chartData.datasets[0], data: stats.data }]
+        };
+      },
+    });
   }
 
-  goToWorkout(): void {
-    this.router.navigate(['/workout']);
+  get totalReps(): number {
+    return this.sessions().reduce((sum, s) => sum + s.reps, 0);
   }
+
+  formatDate(isoDate: string): string {
+    const d = new Date(isoDate);
+    const diff = Math.floor((Date.now() - d.getTime()) / 86400000);
+    if (diff === 0) return "Aujourd'hui";
+    if (diff === 1) return 'Hier';
+    return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  }
+
+  goToExercises(): void { this.router.navigate(['/exercises']); }
+  goToWorkout(): void { this.router.navigate(['/workout']); }
 }
