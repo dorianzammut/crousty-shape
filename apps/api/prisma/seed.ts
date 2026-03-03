@@ -17,14 +17,14 @@ async function main() {
   if (exerciseCount === 0) {
     await prisma.exercise.createMany({
       data: [
-        { name: 'Squat Gobelet',       category: 'Jambes',    level: 'Débutant',     imageUrl: 'https://images.unsplash.com/photo-1645810809381-97f6fd2f7d10?w=600&auto=format&fit=crop' },
-        { name: 'Pompes Classiques',   category: 'Pectoraux', level: 'Intermédiaire',imageUrl: 'https://images.unsplash.com/photo-1525565004407-a1f6f55b5dd6?w=600&auto=format&fit=crop' },
-        { name: 'Soulevé de Terre',    category: 'Dos',       level: 'Avancé',       imageUrl: 'https://images.unsplash.com/photo-1758875569256-f37c438cac65?w=600&auto=format&fit=crop' },
-        { name: 'Développé Couché',    category: 'Pectoraux', level: 'Intermédiaire',imageUrl: 'https://images.unsplash.com/photo-1651346847980-ab1c883e8cc8?w=600&auto=format&fit=crop' },
-        { name: 'Fentes Marchées',     category: 'Jambes',    level: 'Débutant',     imageUrl: 'https://images.unsplash.com/photo-1434608519344-49d77a699e1d?w=600&auto=format&fit=crop' },
-        { name: 'Tractions',           category: 'Dos',       level: 'Avancé',       imageUrl: 'https://images.unsplash.com/photo-1598971639058-aba3c391c0a6?w=600&auto=format&fit=crop' },
-        { name: 'Curl Biceps',         category: 'Bras',      level: 'Débutant',     imageUrl: null },
-        { name: 'Élévations Latérales',category: 'Épaules',   level: 'Intermédiaire',imageUrl: null },
+        { name: 'Squat Gobelet',       category: 'BAS_DU_CORPS',  level: 'Débutant',     imageUrl: 'https://images.unsplash.com/photo-1645810809381-97f6fd2f7d10?w=600&auto=format&fit=crop', description: 'Squat avec haltère tenu contre la poitrine.' },
+        { name: 'Pompes Classiques',   category: 'HAUT_DU_CORPS', level: 'Intermédiaire',imageUrl: 'https://images.unsplash.com/photo-1525565004407-a1f6f55b5dd6?w=600&auto=format&fit=crop', description: 'Exercice de base pour les pectoraux et triceps.' },
+        { name: 'Soulevé de Terre',    category: 'FORCE',         level: 'Avancé',       imageUrl: 'https://images.unsplash.com/photo-1758875569256-f37c438cac65?w=600&auto=format&fit=crop', description: 'Mouvement polyarticulaire pour le dos et les jambes.' },
+        { name: 'Développé Couché',    category: 'HAUT_DU_CORPS', level: 'Intermédiaire',imageUrl: 'https://images.unsplash.com/photo-1651346847980-ab1c883e8cc8?w=600&auto=format&fit=crop', description: 'Exercice phare pour les pectoraux.' },
+        { name: 'Fentes Marchées',     category: 'BAS_DU_CORPS',  level: 'Débutant',     imageUrl: 'https://images.unsplash.com/photo-1434608519344-49d77a699e1d?w=600&auto=format&fit=crop', description: 'Fentes en avançant pour quadriceps et fessiers.' },
+        { name: 'Tractions',           category: 'HAUT_DU_CORPS', level: 'Avancé',       imageUrl: 'https://images.unsplash.com/photo-1598971639058-aba3c391c0a6?w=600&auto=format&fit=crop', description: 'Exercice au poids du corps pour le dos.' },
+        { name: 'Curl Biceps',         category: 'HAUT_DU_CORPS', level: 'Débutant',     imageUrl: null, description: 'Flexion des bras pour les biceps.' },
+        { name: 'Élévations Latérales',category: 'HAUT_DU_CORPS', level: 'Intermédiaire',imageUrl: null, description: 'Isolation des épaules (deltoïdes latéraux).' },
       ],
     });
     console.log('✅ Exercises seeded');

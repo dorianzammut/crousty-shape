@@ -20,6 +20,9 @@ COPY apps/api ./apps/api
 RUN cd apps/api && npx prisma generate
 RUN npm run build:api
 
+# Compile the Prisma seed script (TS → JS) so we can run it without ts-node in production
+RUN cd apps/api && npx tsc --esModuleInterop --skipLibCheck --module commonjs --target es2021 --outDir dist/seed prisma/seed.ts
+
 # ---- Production stage ----
 FROM node:22-alpine AS runner
 

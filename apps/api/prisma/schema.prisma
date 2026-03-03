@@ -34,14 +34,18 @@ model User {
   alerts    Alert[]
   favorites Favorite[]
   programs  Program[]
+  exercises Exercise[] @relation("CoachExercises")
 }
 
 model Exercise {
-  id       String @id @default(uuid())
-  name     String
-  category String
-  level    String
-  imageUrl String?
+  id          String  @id @default(uuid())
+  name        String
+  category    String
+  level       String
+  description String?
+  imageUrl    String?
+  videoUrl    String?
+  createdById String?
 
   sessions         Session[]
   alerts           Alert[]
@@ -59,6 +63,9 @@ model Favorite {
   exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
 
   @@unique([userId, exerciseId])
+  createdBy User?     @relation("CoachExercises", fields: [createdById], references: [id])
+  sessions  Session[]
+  alerts    Alert[]
 }
 
 model Session {

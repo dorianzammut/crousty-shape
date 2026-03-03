@@ -4,7 +4,7 @@
   </h2>
 
   <!-- Stats -->
-  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
     @for (stat of stats(); track stat.label) {
       <div class="bg-zinc-900 p-6 rounded-2xl border border-zinc-800 relative overflow-hidden hover:-translate-y-0.5 transition-transform">
         <div class="absolute top-0 right-0 p-4 opacity-10">
@@ -19,15 +19,29 @@
   <!-- Charts -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2 bg-zinc-900 p-6 rounded-2xl border border-zinc-800">
-      <h3 class="font-bold mb-6">Croissance des Utilisateurs</h3>
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="font-bold">Croissance des Utilisateurs</h3>
+        <div class="flex gap-1 bg-zinc-800 rounded-lg p-1">
+          @for (r of ranges; track r.value) {
+            <button
+              (click)="selectRange(r.value)"
+              [class]="activeRange() === r.value
+                ? 'bg-yellow-400 text-black'
+                : 'text-zinc-400 hover:text-white'"
+              class="px-3 py-1 text-xs font-semibold rounded-md transition-colors">
+              {{ r.label }}
+            </button>
+          }
+        </div>
+      </div>
       <div class="h-56">
-        <canvas baseChart [type]="'line'" [data]="growthChartData" [options]="growthChartOptions"></canvas>
+        <canvas #growthChart baseChart [type]="'line'" [data]="growthChartData" [options]="growthChartOptions"></canvas>
       </div>
     </div>
     <div class="bg-zinc-900 p-6 rounded-2xl border border-zinc-800">
       <h3 class="font-bold mb-6">Types d'Exercices</h3>
       <div class="h-56">
-        <canvas baseChart [type]="'bar'" [data]="barChartData" [options]="barChartOptions"></canvas>
+        <canvas #barChart baseChart [type]="'bar'" [data]="barChartData" [options]="barChartOptions"></canvas>
       </div>
     </div>
   </div>

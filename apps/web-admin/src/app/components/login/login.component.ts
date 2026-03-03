@@ -85,7 +85,10 @@ export class LoginComponent {
     this.loading.set(true);
     this.error.set('');
     this.auth.login(this.email, this.password).subscribe({
-      next: () => this.router.navigate(['/']),
+      next: (res) => {
+          const dest = res.user.role === 'COACH' ? '/my-exercises' : '/dashboard';
+          this.router.navigate([dest]);
+        },
       error: (e) => {
         this.error.set(e.message || e.error?.message || 'Identifiants incorrects');
         this.loading.set(false);

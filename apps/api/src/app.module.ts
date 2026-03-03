@@ -10,11 +10,14 @@ import { SessionsModule } from './sessions/sessions.module';
 import { ProgramsModule } from './programs/programs.module';
 import { AlertsModule } from './alerts/alerts.module';
 import { FavoritesModule } from './favorites/favorites.module';
+import { FirebaseModule } from './firebase/firebase.module';
+import { UploadModule } from './upload/upload.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
+    FirebaseModule,
     AuthModule,
     UsersModule,
     ExercisesModule,
@@ -22,6 +25,7 @@ import { FavoritesModule } from './favorites/favorites.module';
     ProgramsModule,
     AlertsModule,
     FavoritesModule,
+    UploadModule,
   ],
   controllers: [AppController],
   providers: [AppService],

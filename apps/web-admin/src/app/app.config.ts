@@ -6,10 +6,10 @@ import { routes } from './app.routes';
 import { provideCharts, withDefaultRegisterables } from 'ng2-charts';
 import { LUCIDE_ICONS, LucideIconProvider } from 'lucide-angular';
 import {
-  Users, Dumbbell, BarChart3, Settings, Bell, Search,
+  User, UserPlus, Users, Dumbbell, BarChart3, Settings, Bell, Search,
   ArrowUpRight, ChevronRight, AlertCircle, TrendingUp,
   LayoutDashboard, ClipboardList, LogOut, Menu, X,
-  Eye, EyeOff,
+  Eye, EyeOff, Trash2, Plus, BookOpen, Upload, Video, Save, Edit,
 } from 'lucide-angular';
 import { authInterceptor } from './interceptors/auth.interceptor';
 
@@ -24,10 +24,10 @@ export const appConfig: ApplicationConfig = {
       provide: LUCIDE_ICONS,
       multi: true,
       useValue: new LucideIconProvider({
-        Users, Dumbbell, BarChart3, Settings, Bell, Search,
+        User, UserPlus, Users, Dumbbell, BarChart3, Settings, Bell, Search,
         ArrowUpRight, ChevronRight, AlertCircle, TrendingUp,
         LayoutDashboard, ClipboardList, LogOut, Menu, X,
-        Eye, EyeOff,
+        Eye, EyeOff, Trash2, Plus, BookOpen, Upload, Video, Save, Edit,
       })
     }
   ]
