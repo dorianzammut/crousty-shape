@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://api.croustyshape.com',
+  apiUrl: 'https://crousty-api.onrender.com',
 };
