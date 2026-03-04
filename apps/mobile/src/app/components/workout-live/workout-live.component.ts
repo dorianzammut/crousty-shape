@@ -5,18 +5,27 @@ import { DrawingUtils, PoseLandmarker, PoseLandmarkerResult } from '@mediapipe/t
 import { NavigationService } from '../../services/navigation.service';
 import { SessionsService } from '../../services/sessions.service';
 import { PoseDetectionService } from '../../services/pose-detection.service';
+import { TemplateService } from '../../services/template.service';
+import { computeAngles, ANGLE_LANDMARKS } from '../../utils/angle-computation';
+import { createRepDetector, processFrame, scoreToQuality, ExerciseTemplate, RepDetectorState } from '../../utils/rep-detection';
 
 type WorkoutStatus = 'intro' | 'waiting' | 'ready' | 'active' | 'resting' | 'finished' | 'saving' | 'saved';
 type RepQuality = 'perfect' | 'good' | 'bad' | null;
 
-const DEMO_VIDEOS: Record<string, string> = {
-  'Jambes':    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-  'Pectoraux': 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-  'Dos':       'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
-  'Épaules':   'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
-  'Bras':      'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
-};
-const DEFAULT_VIDEO = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4';
+// Skeleton segment colors
+const COLOR_GOOD = '#22c55e';
+const COLOR_CLOSE = '#f97316';
+const COLOR_BAD = '#ef4444';
+const COLOR_NEUTRAL = '#71717a';
+
+// MediaPipe POSE_CONNECTIONS as pairs of landmark indices
+const POSE_CONNECTIONS: [number, number][] = [
+  [0,1],[1,2],[2,3],[3,7],[0,4],[4,5],[5,6],[6,8],
+  [9,10],[11,12],[11,13],[13,15],[15,17],[15,19],[15,21],
+  [12,14],[14,16],[16,18],[16,20],[16,22],
+  [11,23],[12,24],[23,24],[23,25],[24,26],[25,27],[26,28],
+  [27,29],[28,30],[29,31],[30,32],
+];
 
 @Component({
   selector: 'app-workout-live',
@@ -30,6 +39,7 @@ export class WorkoutLiveComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private sessionsService = inject(SessionsService);
   private poseService = inject(PoseDetectionService);
+  private templateService = inject(TemplateService);
   navService = inject(NavigationService);
 
   // ── Workout state ──────────────────────────────────────────────────────────
@@ -47,7 +57,13 @@ export class WorkoutLiveComponent implements OnInit, OnDestroy {
   saveError = signal(false);
   cameraAvailable = signal(true);
 
-  private repInterval: any;
+  // ── Template / scoring state ───────────────────────────────────────────────
+  templateLoaded = signal(false);
+  templateError = signal(false);
+  angleConformity = signal<Record<string, 'good' | 'close' | 'bad'>>({});
+  private template: ExerciseTemplate | null = null;
+  private repDetector: RepDetectorState | null = null;
+
   private timerInterval: any;
   private restTimer: any;
   private animFrameId: number = 0;
@@ -56,8 +72,8 @@ export class WorkoutLiveComponent implements OnInit, OnDestroy {
 
   get exercise(): any { return this.navService.selectedExercise(); }
 
-  get coachVideoUrl(): string {
-    return DEMO_VIDEOS[this.exercise?.category] ?? DEFAULT_VIDEO;
+  get coachVideoUrl(): string | null {
+    return this.exercise?.videoUrl ?? null;
   }
 
   get formattedDuration(): string {
@@ -74,12 +90,14 @@ export class WorkoutLiveComponent implements OnInit, OnDestroy {
   get poseLoading(): boolean { return this.poseService.isLoading(); }
 
   ngOnInit(): void {
-    // Pre-load the model during intro so it's ready when the user starts
+    if (!this.exercise) {
+      this.router.navigate(['/exercises']);
+      return;
+    }
     this.poseService.initialize().catch(err => console.warn('MediaPipe init failed:', err));
   }
 
   ngOnDestroy(): void {
-    clearInterval(this.repInterval);
     clearInterval(this.timerInterval);
     clearInterval(this.restTimer);
     this.poseDetectionActive = false;
@@ -98,6 +116,24 @@ export class WorkoutLiveComponent implements OnInit, OnDestroy {
     this.status.set('waiting');
     this.initCamera();
     setTimeout(() => this.startPoseDetectionLoop(), 150);
+
+    // Fetch template via API proxy
+    const exerciseId = this.exercise?.id;
+    if (exerciseId) {
+      this.templateLoaded.set(false);
+      this.templateError.set(false);
+      this.templateService.getTemplate(exerciseId).subscribe(tpl => {
+        if (tpl) {
+          this.template = tpl;
+          this.repDetector = createRepDetector(tpl);
+          this.templateLoaded.set(true);
+        } else {
+          this.templateError.set(true);
+        }
+      });
+    } else {
+      this.templateError.set(true);
+    }
   }
 
   // ── Camera ────────────────────────────────────────────────────────────────
@@ -155,24 +191,146 @@ export class WorkoutLiveComponent implements OnInit, OnDestroy {
     if (!ctx) return;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
     if (!result.landmarks.length) return;
 
+    const landmarks = result.landmarks[0];
+
+    // Real scoring when active + template loaded
+    if (this.status() === 'active' && this.template && this.repDetector) {
+      const angles = computeAngles(landmarks);
+      if (angles) {
+        const frameResult = processFrame(this.repDetector, angles, this.template);
+        this.angleConformity.set(frameResult.angleConformity);
+
+        if (frameResult.repCompleted) {
+          this.handleRepCompleted(frameResult.repScore);
+        }
+
+        this.drawColoredSkeleton(ctx, landmarks, frameResult.angleConformity);
+        return;
+      }
+    }
+
+    // Fallback: monochrome skeleton (waiting / ready / angles not computed)
     const color = this.status() === 'active'
       ? (this.lastRepQuality() === 'bad' ? '#ef4444' : '#facc15')
-      : '#71717a';
+      : COLOR_NEUTRAL;
 
     const drawingUtils = new DrawingUtils(ctx);
-    for (const landmarks of result.landmarks) {
-      drawingUtils.drawConnectors(landmarks, PoseLandmarker.POSE_CONNECTIONS, {
-        color,
-        lineWidth: 3,
-      });
-      drawingUtils.drawLandmarks(landmarks, {
-        radius: 5,
-        color,
-        fillColor: color + '40',
-      });
+    drawingUtils.drawConnectors(landmarks, PoseLandmarker.POSE_CONNECTIONS, {
+      color,
+      lineWidth: 3,
+    });
+    drawingUtils.drawLandmarks(landmarks, {
+      radius: 5,
+      color,
+      fillColor: color + '40',
+    });
+  }
+
+  // ── Colored skeleton drawing ──────────────────────────────────────────────
+
+  private drawColoredSkeleton(
+    ctx: CanvasRenderingContext2D,
+    landmarks: { x: number; y: number; z: number; visibility?: number }[],
+    conformity: Record<string, 'good' | 'close' | 'bad'>,
+  ): void {
+    const w = ctx.canvas.width;
+    const h = ctx.canvas.height;
+
+    // Build per-landmark status (worst of any angle using that landmark)
+    const landmarkStatus = new Map<number, 'good' | 'close' | 'bad'>();
+    const priority: Record<string, number> = { bad: 2, close: 1, good: 0 };
+
+    for (const [angleName, status] of Object.entries(conformity)) {
+      const indices = ANGLE_LANDMARKS[angleName];
+      if (!indices) continue;
+      for (const idx of indices) {
+        const current = landmarkStatus.get(idx);
+        if (!current || priority[status] > priority[current]) {
+          landmarkStatus.set(idx, status);
+        }
+      }
+    }
+
+    const statusColor = (s: 'good' | 'close' | 'bad' | undefined): string => {
+      if (s === 'good') return COLOR_GOOD;
+      if (s === 'close') return COLOR_CLOSE;
+      if (s === 'bad') return COLOR_BAD;
+      return COLOR_NEUTRAL;
+    };
+
+    // Draw connections
+    ctx.lineWidth = 3;
+    for (const [i, j] of POSE_CONNECTIONS) {
+      const a = landmarks[i];
+      const b = landmarks[j];
+      if (!a || !b) continue;
+
+      const sA = landmarkStatus.get(i);
+      const sB = landmarkStatus.get(j);
+      let seg: 'good' | 'close' | 'bad' | undefined;
+      if (sA && sB) {
+        seg = priority[sA] >= priority[sB] ? sA : sB;
+      } else {
+        seg = sA ?? sB;
+      }
+
+      ctx.strokeStyle = statusColor(seg);
+      ctx.beginPath();
+      ctx.moveTo(a.x * w, a.y * h);
+      ctx.lineTo(b.x * w, b.y * h);
+      ctx.stroke();
+    }
+
+    // Draw joints
+    for (let i = 0; i < landmarks.length; i++) {
+      const lm = landmarks[i];
+      if (!lm || (lm.visibility ?? 0) < 0.5) continue;
+      const color = statusColor(landmarkStatus.get(i));
+      ctx.fillStyle = color + '40';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(lm.x * w, lm.y * h, 5, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.stroke();
+    }
+  }
+
+  // ── Rep completed handler ─────────────────────────────────────────────────
+
+  private handleRepCompleted(score: number): void {
+    this.setRepCount.update(n => n + 1);
+    this.repCount.update(n => n + 1);
+
+    const q = scoreToQuality(score);
+    this.lastRepQuality.set(q);
+
+    if (q === 'bad') {
+      this.feedback.set('Attention à ta posture !');
+      this.quality.update(v => Math.max(0, v - 5));
+    } else if (q === 'good') {
+      this.feedback.set('Bien, continue comme ça !');
+      this.quality.update(v => Math.min(100, v + 1));
+    } else {
+      this.feedback.set('Mouvement parfait !');
+      this.quality.update(v => Math.min(100, v + 2));
+    }
+    setTimeout(() => this.lastRepQuality.set(null), 1000);
+
+    // Check set/workout completion
+    if (this.setRepCount() >= this.targetReps()) {
+      if (this.currentSet() >= this.targetSets()) {
+        clearInterval(this.timerInterval);
+        this.stopCamera();
+        this.poseDetectionActive = false;
+        cancelAnimationFrame(this.animFrameId);
+        this.status.set('finished');
+      } else {
+        this.status.set('resting');
+        this.startRestTimer();
+      }
     }
   }
 
@@ -183,46 +341,12 @@ export class WorkoutLiveComponent implements OnInit, OnDestroy {
     setTimeout(() => {
       this.status.set('active');
       this.startTimer();
-      this.startRepSimulation();
+      // Real scoring runs in drawPoseResult — no simulation
     }, 2000);
   }
 
   private startTimer(): void {
     this.timerInterval = setInterval(() => this.elapsedSeconds.update(n => n + 1), 1000);
-  }
-
-  private startRepSimulation(): void {
-    this.repInterval = setInterval(() => {
-      this.setRepCount.update(n => n + 1);
-      this.repCount.update(n => n + 1);
-
-      const rand = Math.random();
-      const q: RepQuality = rand > 0.8 ? 'bad' : (rand > 0.4 ? 'perfect' : 'good');
-      this.lastRepQuality.set(q);
-
-      if (q === 'bad') {
-        this.feedback.set('Attention à ton dos !');
-        this.quality.update(v => Math.max(0, v - 5));
-      } else {
-        this.feedback.set('Mouvement parfait, continue !');
-        this.quality.update(v => Math.min(100, v + 2));
-      }
-      setTimeout(() => this.lastRepQuality.set(null), 1000);
-
-      if (this.setRepCount() >= this.targetReps()) {
-        clearInterval(this.repInterval);
-        if (this.currentSet() >= this.targetSets()) {
-          clearInterval(this.timerInterval);
-          this.stopCamera();
-          this.poseDetectionActive = false;
-          cancelAnimationFrame(this.animFrameId);
-          this.status.set('finished');
-        } else {
-          this.status.set('resting');
-          this.startRestTimer();
-        }
-      }
-    }, 3000);
   }
 
   private startRestTimer(): void {
@@ -236,15 +360,19 @@ export class WorkoutLiveComponent implements OnInit, OnDestroy {
     this.currentSet.update(n => n + 1);
     this.setRepCount.set(0);
     this.lastRepQuality.set(null);
+
+    // Reset rep detector for new set
+    if (this.template) {
+      this.repDetector = createRepDetector(this.template);
+    }
+
     this.status.set('ready');
     setTimeout(() => {
       this.status.set('active');
-      this.startRepSimulation();
     }, 2000);
   }
 
   finishWorkout(): void {
-    clearInterval(this.repInterval);
     clearInterval(this.timerInterval);
     clearInterval(this.restTimer);
     this.stopCamera();
@@ -303,7 +431,6 @@ export class WorkoutLiveComponent implements OnInit, OnDestroy {
   }
 
   private resetForNextExercise(): void {
-    clearInterval(this.repInterval);
     clearInterval(this.timerInterval);
     clearInterval(this.restTimer);
     this.poseDetectionActive = false;
@@ -319,6 +446,11 @@ export class WorkoutLiveComponent implements OnInit, OnDestroy {
     this.lastRepQuality.set(null);
     this.saveError.set(false);
     this.cameraAvailable.set(true);
+    this.template = null;
+    this.repDetector = null;
+    this.templateLoaded.set(false);
+    this.templateError.set(false);
+    this.angleConformity.set({});
     this.status.set('intro');
   }
 
@@ -329,7 +461,6 @@ export class WorkoutLiveComponent implements OnInit, OnDestroy {
   }
 
   restartWorkout(): void {
-    clearInterval(this.repInterval);
     clearInterval(this.timerInterval);
     clearInterval(this.restTimer);
     this.poseDetectionActive = false;
@@ -346,6 +477,9 @@ export class WorkoutLiveComponent implements OnInit, OnDestroy {
     this.feedback.set('Positionne-toi face à la caméra');
     this.lastRepQuality.set(null);
     this.saveError.set(false);
+    if (this.template) {
+      this.repDetector = createRepDetector(this.template);
+    }
     this.initCamera();
     setTimeout(() => this.startPoseDetectionLoop(), 150);
     this.status.set('waiting');

@@ -9,7 +9,7 @@ export interface ProgramExercise {
   order: number;
   sets: number;
   reps: number;
-  exercise: Pick<Exercise, 'id' | 'name' | 'category' | 'level'>;
+  exercise: Pick<Exercise, 'id' | 'name' | 'category' | 'level' | 'videoUrl' | 'templateUrl' | 'imageUrl'>;
 }
 
 export interface Program {

@@ -21,6 +21,9 @@ export class ExercisesController {
   @Get(':id/skeleton')
   getSkeleton(@Param('id') id: string) { return this.exercisesService.getSkeletonData(id); }
 
+  @Get(':id/template')
+  getTemplate(@Param('id') id: string) { return this.exercisesService.getTemplateData(id); }
+
   @Get(':id')
   findOne(@Param('id') id: string) { return this.exercisesService.findOne(id); }
 

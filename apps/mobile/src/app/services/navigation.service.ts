@@ -4,7 +4,7 @@ export interface ProgramRunStep {
   exerciseId: string;
   sets: number;
   reps: number;
-  exercise: { id: string; name: string; category: string; level: string };
+  exercise: { id: string; name: string; category: string; level: string; videoUrl?: string | null; templateUrl?: string | null; imageUrl?: string | null };
 }
 
 interface ProgramRun {

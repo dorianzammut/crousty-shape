@@ -111,6 +111,15 @@ export class ExercisesService {
     return data;
   }
 
+  async getTemplateData(id: string) {
+    const ex = await this.prisma.exercise.findUnique({ where: { id }, select: { templateUrl: true } });
+    if (!ex) throw new NotFoundException('Exercise not found');
+    if (!ex.templateUrl) throw new NotFoundException('No template data available');
+
+    const { data } = await firstValueFrom(this.httpService.get(ex.templateUrl));
+    return data;
+  }
+
   async remove(id: string, userId?: string, userRole?: string) {
     const ex = await this.prisma.exercise.findUnique({ where: { id } });
     if (!ex) throw new NotFoundException('Exercise not found');
