@@ -8,6 +8,12 @@ export interface Exercise {
   category: string;
   level: string;
   imageUrl: string | null;
+  videoUrl?: string | null;
+  status?: string;
+  templateUrl?: string | null;
+  skeletonUrl?: string | null;
+  featuresUrl?: string | null;
+  repsUrl?: string | null;
 }
 
 @Injectable({ providedIn: 'root' })

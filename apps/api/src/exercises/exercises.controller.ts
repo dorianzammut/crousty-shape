@@ -18,6 +18,12 @@ export class ExercisesController {
     return this.exercisesService.findByCreator(req.user.userId);
   }
 
+  @Get(':id/skeleton')
+  getSkeleton(@Param('id') id: string) { return this.exercisesService.getSkeletonData(id); }
+
+  @Get(':id/template')
+  getTemplate(@Param('id') id: string) { return this.exercisesService.getTemplateData(id); }
+
   @Get(':id')
   findOne(@Param('id') id: string) { return this.exercisesService.findOne(id); }
 
@@ -25,6 +31,14 @@ export class ExercisesController {
   @UseGuards(JwtAuthGuard)
   create(@Body() dto: any, @Request() req: any) {
     return this.exercisesService.create(dto, req.user.userId);
+  }
+
+  @Post(':id/processing-complete')
+  processingComplete(
+    @Param('id') id: string,
+    @Body() dto: { status: string; skeletonUrl?: string; featuresUrl?: string; repsUrl?: string; templateUrl?: string; error?: string },
+  ) {
+    return this.exercisesService.completeProcessing(id, dto);
   }
 
   @Patch(':id')

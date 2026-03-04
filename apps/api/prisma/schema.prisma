@@ -45,6 +45,11 @@ model Exercise {
   description String?
   imageUrl    String?
   videoUrl    String?
+  status      String  @default("DRAFT")
+  skeletonUrl String?
+  featuresUrl String?
+  repsUrl     String?
+  templateUrl String?
   createdById String?
 
   sessions         Session[]

@@ -33,6 +33,8 @@ services:
       FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
       FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL:-}
       FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY:-}
+      WORKER_URL: http://worker:8000
+      API_CALLBACK_URL: http://api:3000
       PORT: 3000
       NODE_ENV: production
     ports:
@@ -65,6 +67,20 @@ services:
       dockerfile: apps/mobile/Dockerfile
     ports:
       - "4200:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────
+  # Python Worker (MediaPipe + OpenCV)
+  # ─────────────────────────────────────────────
+  worker:
+    build: ./worker
+    environment:
+      API_CALLBACK_URL: http://api:3000
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
+      FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL:-}
+      FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY:-}
     depends_on:
       - api
     restart: unless-stopped
