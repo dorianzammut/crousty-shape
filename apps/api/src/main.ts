@@ -4,7 +4,7 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.enableCors({
-    origin: ['http://localhost:4200', 'http://localhost:4201'],
+    origin: ['http://localhost:4200', 'http://localhost:4201', 'https://crousty-admin.onrender.com', 'https://crousty-shape.onrender.com'],
     credentials: true,
   });
   await app.listen(process.env.PORT ?? 3000);
