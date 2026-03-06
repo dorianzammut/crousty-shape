@@ -9,7 +9,7 @@ def build_template(normalized_reps: list[dict], n_points: int = 100) -> dict:
     """Build a reference template from normalized reps.
 
     For each angle, computes the median curve and tolerance bands
-    (percentile 10 / 90) across all reps.
+    (P25 / P75) across all reps.
     """
     if not normalized_reps:
         return {
@@ -34,8 +34,8 @@ def build_template(normalized_reps: list[dict], n_points: int = 100) -> dict:
         arr = np.array(matrix)  # shape (n_reps, n_points)
 
         reference = np.median(arr, axis=0)
-        tol_low = np.percentile(arr, 10, axis=0)
-        tol_high = np.percentile(arr, 90, axis=0)
+        tol_low = np.percentile(arr, 25, axis=0)
+        tol_high = np.percentile(arr, 75, axis=0)
 
         angles_template[name] = {
             "reference": [round(float(v), 1) for v in reference],

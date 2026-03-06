@@ -6,8 +6,11 @@ mp_pose = mp.solutions.pose
 LANDMARK_NAMES = [lm.name for lm in mp_pose.PoseLandmark]
 
 
-def extract_skeleton(frames: list, fps: float, skip: int) -> dict:
+def extract_skeleton(frame_iter, fps: float, skip: int) -> dict:
     """Run MediaPipe Pose on each frame and return skeleton data.
+
+    Accepts a generator/iterable of (frame_idx, frame) tuples so that
+    only one frame needs to be in memory at a time.
 
     Returns dict with list of frame entries, each containing timestamp and 33 landmarks.
     """
@@ -19,11 +22,11 @@ def extract_skeleton(frames: list, fps: float, skip: int) -> dict:
         min_detection_confidence=0.5,
         min_tracking_confidence=0.5,
     ) as pose:
-        for i, frame in enumerate(frames):
+        for frame_idx, frame in frame_iter:
             frame_rgb = frame[:, :, ::-1]  # BGR to RGB
             results = pose.process(frame_rgb)
 
-            timestamp = round((i * skip) / fps, 3) if fps > 0 else 0
+            timestamp = round(frame_idx / fps, 3) if fps > 0 else 0
 
             if results.pose_landmarks:
                 landmarks = []

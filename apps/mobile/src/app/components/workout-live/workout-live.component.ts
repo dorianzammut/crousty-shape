@@ -49,7 +49,7 @@ export class WorkoutLiveComponent implements OnInit, OnDestroy {
   currentSet = signal(1);
   targetSets = signal(3);
   targetReps = signal(10);
-  quality = signal(100);
+  quality = signal(0);
   feedback = signal('Positionne-toi face à la caméra');
   lastRepQuality = signal<RepQuality>(null);
   elapsedSeconds = signal(0);
@@ -63,6 +63,7 @@ export class WorkoutLiveComponent implements OnInit, OnDestroy {
   angleConformity = signal<Record<string, 'good' | 'close' | 'bad'>>({});
   private template: ExerciseTemplate | null = null;
   private repDetector: RepDetectorState | null = null;
+  private qualitySum = 0;
 
   private timerInterval: any;
   private restTimer: any;
@@ -84,6 +85,10 @@ export class WorkoutLiveComponent implements OnInit, OnDestroy {
   get restFormattedDuration(): string {
     const s = this.restElapsed();
     return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
+  }
+
+  get avgQuality(): number {
+    return this.repCount() > 0 ? Math.round(this.qualitySum / this.repCount()) : 0;
   }
 
   get poseReady(): boolean { return this.poseService.isReady(); }
@@ -307,15 +312,16 @@ export class WorkoutLiveComponent implements OnInit, OnDestroy {
     const q = scoreToQuality(score);
     this.lastRepQuality.set(q);
 
+    // Display this rep's score directly
+    this.quality.set(score);
+    this.qualitySum += score;
+
     if (q === 'bad') {
       this.feedback.set('Attention à ta posture !');
-      this.quality.update(v => Math.max(0, v - 5));
     } else if (q === 'good') {
       this.feedback.set('Bien, continue comme ça !');
-      this.quality.update(v => Math.min(100, v + 1));
     } else {
       this.feedback.set('Mouvement parfait !');
-      this.quality.update(v => Math.min(100, v + 2));
     }
     setTimeout(() => this.lastRepQuality.set(null), 1000);
 
@@ -406,10 +412,14 @@ export class WorkoutLiveComponent implements OnInit, OnDestroy {
     this.status.set('saving');
     this.saveError.set(false);
 
+    const avgQuality = this.repCount() > 0
+      ? Math.round(this.qualitySum / this.repCount())
+      : 0;
+
     this.sessionsService.create({
       exerciseId: ex.id,
       reps: this.repCount(),
-      qualityScore: this.quality(),
+      qualityScore: avgQuality,
       duration: this.elapsedSeconds(),
     }).subscribe({
       next: () => {
@@ -439,7 +449,7 @@ export class WorkoutLiveComponent implements OnInit, OnDestroy {
     this.repCount.set(0);
     this.setRepCount.set(0);
     this.currentSet.set(1);
-    this.quality.set(100);
+    this.quality.set(0);
     this.elapsedSeconds.set(0);
     this.restElapsed.set(0);
     this.feedback.set('Positionne-toi face à la caméra');
@@ -448,6 +458,7 @@ export class WorkoutLiveComponent implements OnInit, OnDestroy {
     this.cameraAvailable.set(true);
     this.template = null;
     this.repDetector = null;
+    this.qualitySum = 0;
     this.templateLoaded.set(false);
     this.templateError.set(false);
     this.angleConformity.set({});
@@ -471,7 +482,8 @@ export class WorkoutLiveComponent implements OnInit, OnDestroy {
     this.repCount.set(0);
     this.setRepCount.set(0);
     this.currentSet.set(1);
-    this.quality.set(100);
+    this.quality.set(0);
+    this.qualitySum = 0;
     this.elapsedSeconds.set(0);
     this.restElapsed.set(0);
     this.feedback.set('Positionne-toi face à la caméra');

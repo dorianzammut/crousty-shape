@@ -1,5 +1,9 @@
 /**
- * Real-time rep detection state machine + per-frame scoring.
+ * Real-time rep detection state machine + trajectory-based scoring.
+ *
+ * Rep score = similarity between the user's actual trajectory (resampled
+ * to 100 points) and the template's reference curve.  This is the same
+ * normalise-then-compare approach used in gesture recognition.
  */
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -22,19 +26,17 @@ export interface RepDetectorState {
   currentMin: number;
   currentMax: number;
   amplitudeThreshold: number;
-  frameScores: number[];
   repCount: number;
   lastRepScore: number;
   repProgress: number;
   valleyIndex: number;
   framesSinceLastTransition: number;
-  /** Total frames accumulated across the current full cycle (descend + ascend). */
   cycleFrameCount: number;
-  /** True after the first descending phase is complete (reached the bottom).
-   *  A rep is only counted after a full cycle: descend → ascend. */
   completedDescending: boolean;
-  /** Per-angle weights derived from reference amplitude. Higher amplitude = higher weight. */
   angleWeights: Record<string, number>;
+  referenceAmplitude: number;
+  /** Angle snapshots collected during the current rep cycle. */
+  cycleAngles: Record<string, number>[];
 }
 
 export interface FrameResult {
@@ -47,32 +49,15 @@ export interface FrameResult {
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-/**
- * EMA smoothing factor — 0.3 gives moderate smoothing.
- * With alpha=0.3 and ~3-8° jitter, single-frame spikes are dampened to ~1-2.5°.
- * Real movements (sustained direction) pass through with ~30% lag.
- */
 const EMA_ALPHA = 0.3;
-
-/**
- * Degrees of reversal on the SMOOTHED signal to confirm a direction change.
- * With alpha=0.3, jitter rarely exceeds 3° on the smoothed signal,
- * so 10° is safe from noise while remaining reachable during real reps.
- */
 const REVERSAL_THRESHOLD = 10;
-
-/**
- * Minimum amplitude as a fraction of the template's reference amplitude
- * to count a movement as a valid rep.
- */
 const AMPLITUDE_FRACTION = 0.25;
-
-/** Minimum frames in a single phase before allowing a transition (debounce). */
 const MIN_FRAMES_IN_PHASE = 5;
-
-/** Minimum total frames for a full rep cycle (descend + ascend).
- *  At ~20-30 fps, a real rep takes at least 0.5s = 12+ frames. */
 const MIN_CYCLE_FRAMES = 12;
+
+/** Maximum half-bandwidth (degrees) used for score computation.
+ *  40° accounts for body-type and camera-angle differences. */
+const MAX_SCORE_HALF_BAND = 40;
 
 // ── Factory ──────────────────────────────────────────────────────────────────
 
@@ -80,7 +65,6 @@ export function createRepDetector(template: ExerciseTemplate): RepDetectorState 
   const primary = template.primary_angle;
   const ref = template.angles[primary].reference;
 
-  // Find the valley (minimum) index in the reference curve
   let valleyIndex = 0;
   let minVal = Infinity;
   for (let i = 0; i < ref.length; i++) {
@@ -92,10 +76,8 @@ export function createRepDetector(template: ExerciseTemplate): RepDetectorState 
 
   const refMax = Math.max(...ref);
   const refMin = Math.min(...ref);
-  const amplitudeThreshold = (refMax - refMin) * AMPLITUDE_FRACTION;
-
-  // Compute per-angle weights based on reference amplitude.
-  // Angles that move more during the exercise get more weight in scoring.
+  const referenceAmplitude = refMax - refMin;
+  const amplitudeThreshold = referenceAmplitude * AMPLITUDE_FRACTION;
   const angleWeights = computeAngleWeights(template);
 
   return {
@@ -106,7 +88,6 @@ export function createRepDetector(template: ExerciseTemplate): RepDetectorState 
     currentMin: Infinity,
     currentMax: -Infinity,
     amplitudeThreshold,
-    frameScores: [],
     repCount: 0,
     lastRepScore: 0,
     repProgress: 0,
@@ -114,7 +95,9 @@ export function createRepDetector(template: ExerciseTemplate): RepDetectorState 
     framesSinceLastTransition: 0,
     cycleFrameCount: 0,
     completedDescending: false,
+    referenceAmplitude,
     angleWeights,
+    cycleAngles: [],
   };
 }
 
@@ -141,29 +124,33 @@ export function processFrame(
   state.framesSinceLastTransition++;
   state.cycleFrameCount++;
 
+  // Collect angle snapshot for trajectory comparison
+  if (state.phase !== 'idle') {
+    state.cycleAngles.push({ ...angles });
+  }
+
   // ── State machine ──────────────────────────────────────────────────────
   let repCompleted = false;
   let repScore = 0;
 
   switch (state.phase) {
     case 'idle': {
-      // Wait for clear movement to pick initial direction
       if (state.lastValue !== 0) {
         const diff = val - state.lastValue;
         if (diff < -2) {
           state.phase = 'descending';
           state.currentMin = val;
           state.currentMax = state.lastValue;
-          state.frameScores = [];
           state.framesSinceLastTransition = 0;
           state.cycleFrameCount = 0;
+          state.cycleAngles = [];
         } else if (diff > 2) {
           state.phase = 'ascending';
           state.currentMax = val;
           state.currentMin = state.lastValue;
-          state.frameScores = [];
           state.framesSinceLastTransition = 0;
           state.cycleFrameCount = 0;
+          state.cycleAngles = [];
         }
       }
       state.lastValue = val;
@@ -172,7 +159,6 @@ export function processFrame(
 
     case 'descending': {
       if (val < state.currentMin) state.currentMin = val;
-      // Reversal: switch to ascending (only after debounce)
       if (state.framesSinceLastTransition >= MIN_FRAMES_IN_PHASE &&
           val > state.currentMin + REVERSAL_THRESHOLD) {
         state.phase = 'ascending';
@@ -186,42 +172,37 @@ export function processFrame(
 
     case 'ascending': {
       if (val > state.currentMax) state.currentMax = val;
-      // Reversal: switch to descending → rep counted only after a full cycle
       if (state.framesSinceLastTransition >= MIN_FRAMES_IN_PHASE &&
           val < state.currentMax - REVERSAL_THRESHOLD) {
         const amplitude = state.currentMax - state.currentMin;
-        // Only count if: full descend+ascend cycle, enough amplitude, enough duration
         if (state.completedDescending &&
             amplitude >= state.amplitudeThreshold &&
             state.cycleFrameCount >= MIN_CYCLE_FRAMES) {
           repCompleted = true;
           state.repCount++;
-          repScore = state.frameScores.length > 0
-            ? Math.round(state.frameScores.reduce((a, b) => a + b, 0) / state.frameScores.length)
-            : 0;
+          // Score = trajectory similarity (resample + compare)
+          repScore = computeRepSimilarity(state.cycleAngles, template, state.angleWeights, state.primaryAngle);
           state.lastRepScore = repScore;
         }
         // Reset for next rep
         state.phase = 'descending';
         state.currentMin = val;
         state.currentMax = val;
-        state.frameScores = [];
         state.completedDescending = false;
         state.framesSinceLastTransition = 0;
         state.cycleFrameCount = 0;
+        state.cycleAngles = [];
       }
       state.lastValue = val;
       break;
     }
   }
 
-  // ── Template index mapping ─────────────────────────────────────────────
+  // ── Template index mapping (for visual feedback only) ───────────────────
   const templateIndex = mapToTemplateIndex(state, val, template);
 
-  // ── Per-frame scoring (weighted by angle amplitude) ────────────────────
+  // ── Per-frame conformity (visual feedback — skeleton colors) ────────────
   const angleConformity: Record<string, 'good' | 'close' | 'bad'> = {};
-  let weightedSum = 0;
-  let weightSum = 0;
 
   for (const angleName of Object.keys(template.angles)) {
     const angleVal = angles[angleName];
@@ -230,34 +211,18 @@ export function processFrame(
     const def = template.angles[angleName];
     const low = def.tolerance_low[templateIndex];
     const high = def.tolerance_high[templateIndex];
-    const bandwidth = (high - low) * 0.5;
-
-    let status: 'good' | 'close' | 'bad';
-    let frameScore: number;
+    const rawHalfBand = (high - low) * 0.5;
 
     if (angleVal >= low && angleVal <= high) {
-      status = 'good';
-      frameScore = 100;
-    } else if (angleVal >= low - bandwidth && angleVal <= high + bandwidth) {
-      status = 'close';
-      frameScore = 60;
+      angleConformity[angleName] = 'good';
+    } else if (angleVal >= low - rawHalfBand && angleVal <= high + rawHalfBand) {
+      angleConformity[angleName] = 'close';
     } else {
-      status = 'bad';
-      frameScore = 0;
+      angleConformity[angleName] = 'bad';
     }
-
-    angleConformity[angleName] = status;
-    const w = state.angleWeights[angleName] ?? 0;
-    weightedSum += frameScore * w;
-    weightSum += w;
   }
 
-  const frameAvg = weightSum > 0 ? weightedSum / weightSum : 0;
-  if (state.phase !== 'idle') {
-    state.frameScores.push(frameAvg);
-  }
-
-  // ── Rep progress (0-1) — based on template index position ──────────────
+  // ── Rep progress ───────────────────────────────────────────────────────
   const nPoints = template.angles[state.primaryAngle].reference.length || 100;
   state.repProgress = templateIndex / (nPoints - 1);
 
@@ -270,33 +235,122 @@ export function processFrame(
   };
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── Trajectory scoring ──────────────────────────────────────────────────────
 
 /**
- * Compute normalized weights for each angle based on the amplitude
- * (max - min) of its reference curve. Angles that move more during
- * the exercise contribute more to the score.
+ * Compare the user's rep trajectory against the template reference.
  *
- * Example for biceps curl:
- *   right_elbow (amplitude ~74°) → weight ~0.42
- *   left_elbow  (amplitude ~3°)  → weight ~0.02
+ * 1. Resample each angle's collected values to n_points (100) via linear interpolation
+ * 2. At each of the 100 points, score the distance from reference (capped halfBand)
+ * 3. Weighted average across all angles
+ *
+ * This is the same normalise-then-compare approach the worker uses to BUILD
+ * the template — now applied in reverse for real-time scoring.
  */
+function computeRepSimilarity(
+  cycleAngles: Record<string, number>[],
+  template: ExerciseTemplate,
+  angleWeights: Record<string, number>,
+  primaryAngle: string,
+): number {
+  const nPoints = template.n_points || 100;
+  if (cycleAngles.length < 2) return 0;
+
+  // ── Phase alignment ─────────────────────────────────────────────────────
+  // The state machine collects peak→valley→peak (descending then ascending).
+  // The template is valley→peak→valley (built valley-to-valley by the worker).
+  // Rotate the collected trajectory so the valley is at index 0 to match.
+  const primaryValues = cycleAngles.map(a => a[primaryAngle]);
+  let valleyFrame = 0;
+  let minPrimary = Infinity;
+  for (let i = 0; i < primaryValues.length; i++) {
+    if (primaryValues[i] < minPrimary) {
+      minPrimary = primaryValues[i];
+      valleyFrame = i;
+    }
+  }
+  // Rotate: [valley→peak (ascending), peak→valley (descending)]
+  const aligned = [...cycleAngles.slice(valleyFrame), ...cycleAngles.slice(0, valleyFrame)];
+
+  // ── Score each angle ────────────────────────────────────────────────────
+  let totalWeightedScore = 0;
+  let totalWeight = 0;
+
+  for (const [angleName, def] of Object.entries(template.angles)) {
+    const w = angleWeights[angleName] ?? 0;
+    if (w === 0) continue;
+
+    const values: number[] = [];
+    for (const snapshot of aligned) {
+      if (snapshot[angleName] !== undefined) {
+        values.push(snapshot[angleName]);
+      }
+    }
+    if (values.length < 2) continue;
+
+    // Resample to nPoints (same as worker normalize)
+    const resampled = resample(values, nPoints);
+
+    // Compare each resampled point against the template
+    let angleScore = 0;
+    for (let i = 0; i < nPoints; i++) {
+      const val = resampled[i];
+      const refVal = def.reference[i];
+      const low = def.tolerance_low[i];
+      const high = def.tolerance_high[i];
+      const hb = Math.min((high - low) * 0.5, MAX_SCORE_HALF_BAND);
+      const dist = Math.abs(val - refVal);
+
+      if (dist <= hb) {
+        // Inside band: 100 at center → 60 at edge
+        angleScore += hb > 0 ? 100 - 40 * (dist / hb) : 100;
+      } else if (dist <= hb * 2) {
+        // Transition: 60 → 0
+        angleScore += 60 - 60 * ((dist - hb) / Math.max(hb, 5));
+      }
+      // else 0
+    }
+    angleScore /= nPoints;
+
+    totalWeightedScore += angleScore * w;
+    totalWeight += w;
+  }
+
+  return totalWeight > 0 ? Math.round(totalWeightedScore / totalWeight) : 0;
+}
+
+/**
+ * Resample an array of values to a target length using linear interpolation.
+ * Same approach as worker/processing/normalize.py.
+ */
+function resample(values: number[], targetLength: number): number[] {
+  const result: number[] = [];
+  const srcLen = values.length;
+  for (let i = 0; i < targetLength; i++) {
+    const srcPos = (i / (targetLength - 1)) * (srcLen - 1);
+    const lo = Math.floor(srcPos);
+    const hi = Math.min(lo + 1, srcLen - 1);
+    const frac = srcPos - lo;
+    result.push(values[lo] * (1 - frac) + values[hi] * frac);
+  }
+  return result;
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
 function computeAngleWeights(template: ExerciseTemplate): Record<string, number> {
   const amplitudes: Record<string, number> = {};
   let totalAmplitude = 0;
 
   for (const [name, def] of Object.entries(template.angles)) {
     const ref = def.reference;
-    const max = Math.max(...ref);
-    const min = Math.min(...ref);
-    const amp = max - min;
+    const amp = Math.max(...ref) - Math.min(...ref);
     amplitudes[name] = amp;
     totalAmplitude += amp;
   }
 
   const weights: Record<string, number> = {};
   if (totalAmplitude === 0) {
-    // Fallback: equal weights
     const n = Object.keys(template.angles).length;
     for (const name of Object.keys(template.angles)) {
       weights[name] = 1 / n;
@@ -306,19 +360,9 @@ function computeAngleWeights(template: ExerciseTemplate): Record<string, number>
       weights[name] = amp / totalAmplitude;
     }
   }
-
   return weights;
 }
 
-/**
- * Map the current primary-angle value to the closest index in the template
- * reference curve (0 to n_points-1).
- *
- * Previous implementation split the curve at `valleyIndex`, but templates
- * built valley-to-valley can have the valley at index 3 out of 100,
- * making the "descending" half too small. Instead, we now search the entire
- * reference curve for the closest match — simple and robust.
- */
 function mapToTemplateIndex(
   _state: RepDetectorState,
   currentValue: number,

@@ -13,11 +13,8 @@ def download_video(url: str) -> str:
     return path
 
 
-def read_frames(path: str, skip: int = 2) -> dict:
-    """Read video frames, skipping every `skip` frames for performance.
-
-    Returns dict with frames list, fps, duration, resolution, total_frames, and skip value.
-    """
+def get_video_metadata(path: str, skip: int = 2) -> dict:
+    """Read video metadata without loading frames into memory."""
     cap = cv2.VideoCapture(path)
     if not cap.isOpened():
         raise ValueError(f"Cannot open video: {path}")
@@ -27,25 +24,33 @@ def read_frames(path: str, skip: int = 2) -> dict:
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     duration = total_frames / fps if fps > 0 else 0
-
-    frames = []
-    frame_idx = 0
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
-        if frame_idx % skip == 0:
-            frames.append(frame)
-        frame_idx += 1
-
     cap.release()
-    os.unlink(path)
 
     return {
-        "frames": frames,
         "fps": fps,
         "duration": round(duration, 2),
         "resolution": [width, height],
         "total_frames": total_frames,
         "skip": skip,
     }
+
+
+def iter_frames(path: str, skip: int = 2):
+    """Yield video frames one at a time, skipping every `skip` frames.
+
+    Only one frame is in memory at any time (~6 MB instead of ~3 GB).
+    """
+    cap = cv2.VideoCapture(path)
+    if not cap.isOpened():
+        raise ValueError(f"Cannot open video: {path}")
+
+    frame_idx = 0
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        if frame_idx % skip == 0:
+            yield frame_idx, frame
+        frame_idx += 1
+
+    cap.release()

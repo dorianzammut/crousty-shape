@@ -1,9 +1,10 @@
 import logging
+import os
 from fastapi import FastAPI, BackgroundTasks
 from pydantic import BaseModel
 import httpx
 
-from processing.video import download_video, read_frames
+from processing.video import download_video, get_video_metadata, iter_frames
 from processing.pose import extract_skeleton
 from processing.features import compute_features
 from processing.reps import detect_reps, filter_reps
@@ -42,15 +43,16 @@ async def run_pipeline(exercise_id: str, video_url: str, callback_url: str):
         video_path = download_video(video_url)
         logger.info(f"Video downloaded: {video_path}")
 
-        # 2. Read frames and extract skeleton
-        frames_data = read_frames(video_path)
-        skeleton = extract_skeleton(frames_data["frames"], frames_data["fps"], frames_data["skip"])
+        # 2. Read frames (streamed) and extract skeleton
+        meta = get_video_metadata(video_path)
+        skeleton = extract_skeleton(iter_frames(video_path, meta["skip"]), meta["fps"], meta["skip"])
         skeleton["metadata"] = {
-            "fps": frames_data["fps"],
-            "duration": frames_data["duration"],
-            "resolution": frames_data["resolution"],
-            "total_frames": frames_data["total_frames"],
+            "fps": meta["fps"],
+            "duration": meta["duration"],
+            "resolution": meta["resolution"],
+            "total_frames": meta["total_frames"],
         }
+        os.unlink(video_path)
         logger.info(f"Skeleton extracted: {len(skeleton['frames'])} frames processed")
 
         # 3. Compute features
