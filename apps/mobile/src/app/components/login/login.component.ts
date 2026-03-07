@@ -8,7 +8,7 @@ import { AuthService } from '../../services/auth.service';
   selector: 'app-login',
   imports: [FormsModule, RouterLink, LucideAngularModule],
   template: `
-    <div class="min-h-screen bg-black flex flex-col justify-center px-6">
+    <div class="h-screen overflow-hidden bg-black flex flex-col justify-center px-6">
       <!-- Logo -->
       <div class="text-center mb-10">
         <div class="w-16 h-16 bg-yellow-400 rounded-2xl flex items-center justify-center mx-auto mb-4">

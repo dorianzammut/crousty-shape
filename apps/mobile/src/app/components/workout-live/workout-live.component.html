@@ -56,7 +56,6 @@
           @if (exercise?.category) {
             <span class="text-yellow-400 text-sm font-bold uppercase tracking-widest">{{ exercise.category }}</span>
           }
-          <!-- Objectif séries × reps si lancé depuis un programme -->
           @if (navService.programRunStep()) {
             <div class="flex items-center gap-4 mt-3">
               <div class="bg-white/10 backdrop-blur-sm px-4 py-2 rounded-xl flex items-center gap-2">
@@ -93,7 +92,6 @@
   <div class="flex flex-col h-[80vh] bg-zinc-900 rounded-3xl p-6 border border-zinc-800 overflow-y-auto">
 
     @if (status() === 'saved') {
-      <!-- Confirmation -->
       <div class="flex flex-col items-center justify-center flex-1 gap-6">
         <div class="w-24 h-24 rounded-full bg-yellow-400 flex items-center justify-center shadow-[0_0_40px_rgba(250,204,21,0.4)]">
           <lucide-icon name="check" [size]="48" class="text-black"></lucide-icon>
@@ -177,37 +175,39 @@
   </div>
 }
 
-<!-- ── Live Analysis ───────────────────────────────────────────────────────── -->
-@if (status() === 'waiting' || status() === 'ready' || status() === 'active') {
+<!-- ── Live Analysis + Repos (video stays in DOM during rest) ─────────────── -->
+@if (status() === 'waiting' || status() === 'ready' || status() === 'active' || status() === 'resting') {
   <div class="fixed inset-0 z-[60] bg-black flex flex-col">
-    <!-- Top Bar -->
-    <div class="absolute top-0 left-0 right-0 p-6 flex justify-between items-center z-10">
-      <button
-        (click)="close()"
-        class="w-10 h-10 bg-black/40 backdrop-blur-md border border-white/10 rounded-full flex items-center justify-center text-white"
-      >
-        <lucide-icon name="x" [size]="20"></lucide-icon>
-      </button>
 
-      <!-- Indicateur de série -->
-      <div class="bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 flex items-center gap-2">
-        @if (status() === 'active') {
-          <div class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
-        }
-        <span class="text-xs font-bold uppercase tracking-widest">
-          Série {{ currentSet() }}/{{ targetSets() }}
-        </span>
+    <!-- Top Bar (masqué pendant le repos) -->
+    @if (status() !== 'resting') {
+      <div class="absolute top-0 left-0 right-0 p-6 flex justify-between items-center z-10">
+        <button
+          (click)="close()"
+          class="w-10 h-10 bg-black/40 backdrop-blur-md border border-white/10 rounded-full flex items-center justify-center text-white"
+        >
+          <lucide-icon name="x" [size]="20"></lucide-icon>
+        </button>
+
+        <div class="bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 flex items-center gap-2">
+          @if (status() === 'active') {
+            <div class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+          }
+          <span class="text-xs font-bold uppercase tracking-widest">
+            Série {{ currentSet() }}/{{ targetSets() }}
+          </span>
+        </div>
+
+        <div class="bg-black/40 backdrop-blur-md px-3 py-2 rounded-full border border-white/10 text-xs font-black text-yellow-400">
+          {{ formattedDuration }}
+        </div>
       </div>
+    }
 
-      <div class="bg-black/40 backdrop-blur-md px-3 py-2 rounded-full border border-white/10 text-xs font-black text-yellow-400">
-        {{ formattedDuration }}
-      </div>
-    </div>
-
-    <!-- Analysis View -->
+    <!-- Camera + Canvas — toujours dans le DOM pour éviter la perte du stream -->
     <div class="flex-1 relative overflow-hidden bg-zinc-900">
       @if (cameraAvailable()) {
-        <video #cameraVideo autoplay playsinline muted class="absolute inset-0 w-full h-full object-cover"></video>
+        <video #cameraVideo autoplay playsinline muted class="absolute inset-0 w-full h-full object-cover" style="transform: scaleX(-1);"></video>
       } @else {
         <div class="absolute inset-0 bg-gradient-to-b from-zinc-800 to-zinc-950"></div>
         <div class="absolute inset-0 flex items-center justify-center">
@@ -218,172 +218,166 @@
         </div>
       }
 
-      <canvas #skeletonCanvas width="400" height="600" class="absolute inset-0 w-full h-full pointer-events-none z-20"></canvas>
+      <canvas #skeletonCanvas width="400" height="600" class="absolute inset-0 w-full h-full pointer-events-none z-20" style="transform: scaleX(-1)"></canvas>
 
-      <!-- Stats + feedback -->
-      <div class="absolute bottom-32 left-0 right-0 p-6 z-30 flex flex-col items-center">
-        @if (lastRepQuality()) {
-          <div [class]="'mb-4 px-6 py-2 rounded-full font-black uppercase italic tracking-wider text-2xl shadow-2xl ' + getRepQualityClass()">
-            {{ getRepQualityLabel() }}
+      <!-- Stats + feedback (masqué pendant le repos) -->
+      @if (status() !== 'resting') {
+        <div class="absolute bottom-32 left-0 right-0 p-6 z-30 flex flex-col items-center">
+          @if (lastRepQuality()) {
+            <div [class]="'mb-4 px-6 py-2 rounded-full font-black uppercase italic tracking-wider text-2xl shadow-2xl ' + getRepQualityClass()">
+              {{ getRepQualityLabel() }}
+            </div>
+          }
+
+          <div class="bg-black/60 backdrop-blur-xl border border-white/10 p-4 rounded-3xl flex items-center gap-6 shadow-2xl">
+            <div class="text-center">
+              <div class="text-4xl font-black text-yellow-400 leading-none">
+                {{ setRepCount() }}<span class="text-zinc-600 text-2xl">/{{ targetReps() }}</span>
+              </div>
+              <div class="text-[10px] font-bold uppercase text-zinc-500 mt-1">Reps</div>
+            </div>
+            <div class="w-px h-10 bg-zinc-800"></div>
+            <div class="text-center">
+              <div class="text-4xl font-black leading-none">{{ quality() }}%</div>
+              <div class="text-[10px] font-bold uppercase text-zinc-500 mt-1">Score</div>
+            </div>
+          </div>
+
+          <p class="mt-6 text-center text-sm font-medium text-white bg-black/40 px-6 py-2 rounded-full backdrop-blur-sm">
+            {{ feedback() }}
+          </p>
+        </div>
+      }
+
+      <!-- Overlay repos par-dessus la caméra -->
+      @if (status() === 'resting') {
+        <div class="absolute inset-0 bg-zinc-950/95 z-40 flex flex-col">
+
+          <div class="px-6 py-5 flex justify-between items-center">
+            <button
+              (click)="finishWorkout()"
+              class="w-10 h-10 bg-zinc-900 border border-zinc-800 rounded-full flex items-center justify-center text-zinc-500 hover:text-white transition-colors"
+            >
+              <lucide-icon name="x" [size]="20"></lucide-icon>
+            </button>
+            <span class="text-xs font-bold uppercase tracking-widest text-zinc-500">
+              {{ exercise?.name }}
+            </span>
+            <div class="w-10"></div>
+          </div>
+
+          <div class="flex justify-center gap-2 px-6">
+            @for (i of [].constructor(targetSets()); track $index) {
+              <div
+                class="h-1.5 flex-1 rounded-full transition-colors"
+                [class]="$index < currentSet() ? 'bg-yellow-400' : 'bg-zinc-800'"
+              ></div>
+            }
+          </div>
+
+          <div class="flex-1 flex flex-col items-center justify-center gap-8 px-8">
+            <div class="text-center">
+              <p class="text-green-400 font-black text-sm uppercase tracking-widest mb-2">Série {{ currentSet() }} terminée !</p>
+              <p class="text-zinc-500 text-sm">Prochaine : Série {{ currentSet() + 1 }} / {{ targetSets() }}</p>
+            </div>
+
+            <div class="relative w-44 h-44">
+              <svg class="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="44" fill="none" stroke="#27272a" stroke-width="4"/>
+                <circle
+                  cx="50" cy="50" r="44" fill="none"
+                  stroke="#facc15" stroke-width="4" stroke-linecap="round"
+                  stroke-dasharray="276.5"
+                  [attr.stroke-dashoffset]="276.5 - (276.5 * (restElapsed() / 60))"
+                  style="transition: stroke-dashoffset 1s linear"
+                />
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <span class="text-4xl font-black">{{ restFormattedDuration }}</span>
+                <span class="text-[10px] font-bold uppercase text-zinc-500 mt-1">Repos</span>
+              </div>
+            </div>
+
+            <p class="text-zinc-600 text-xs text-center">Repose-toi, puis lance la série suivante quand tu es prêt</p>
+          </div>
+
+          <div class="p-8">
+            <button
+              (click)="startNextSet()"
+              class="w-full bg-yellow-400 py-4 rounded-2xl text-black font-black uppercase tracking-tighter hover:bg-yellow-300 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            >
+              <lucide-icon name="play" [size]="20"></lucide-icon>
+              Lancer la série {{ currentSet() + 1 }}
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Bottom Controls (masqué pendant le repos) -->
+    @if (status() !== 'resting') {
+      <div class="bg-black p-8 flex flex-col items-center gap-6">
+        @if (status() === 'waiting') {
+          <div class="flex flex-col items-center gap-4 w-full max-w-xs">
+            <p class="text-zinc-500 text-sm">
+              Objectif : <span class="text-white font-bold">{{ targetReps() }} répétitions</span>
+            </p>
+
+            <button
+              (click)="startAnalysis()"
+              [disabled]="!poseReady || !cameraAvailable() || !templateLoaded()"
+              class="w-20 h-20 rounded-full flex items-center justify-center transition-all"
+              [class.bg-yellow-400]="poseReady && cameraAvailable() && templateLoaded()"
+              [class.text-black]="poseReady && cameraAvailable() && templateLoaded()"
+              [class.shadow-[0_0_30px_rgba(250,204,21,0.4)]]="poseReady && cameraAvailable() && templateLoaded()"
+              [class.hover:scale-105]="poseReady && cameraAvailable() && templateLoaded()"
+              [class.bg-zinc-800]="!poseReady || !cameraAvailable() || !templateLoaded()"
+              [class.text-zinc-600]="!poseReady || !cameraAvailable() || !templateLoaded()"
+              [class.cursor-not-allowed]="!poseReady || !cameraAvailable() || !templateLoaded()"
+            >
+              @if (poseLoading || (!templateLoaded() && !templateError())) {
+                <lucide-icon name="refresh-cw" [size]="32" class="animate-spin"></lucide-icon>
+              } @else {
+                <lucide-icon name="camera" [size]="32"></lucide-icon>
+              }
+            </button>
+
+            @if (!cameraAvailable()) {
+              <p class="text-[10px] font-bold uppercase tracking-widest text-red-400">Caméra indisponible</p>
+            } @else if (templateError()) {
+              <p class="text-[10px] font-bold uppercase tracking-widest text-red-400">
+                Modèle de référence indisponible — exercice non analysé
+              </p>
+            } @else if (poseLoading) {
+              <p class="text-[10px] font-bold uppercase tracking-widest text-yellow-400/60 animate-pulse">
+                Chargement du modèle IA...
+              </p>
+            } @else if (!templateLoaded()) {
+              <p class="text-[10px] font-bold uppercase tracking-widest text-yellow-400/60 animate-pulse">
+                Chargement du modèle de référence...
+              </p>
+            } @else if (poseReady) {
+              <p class="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Lancer l'analyse Live</p>
+            } @else {
+              <p class="text-[10px] font-bold uppercase tracking-widest text-red-400">Modèle indisponible</p>
+            }
           </div>
         }
 
-        <div class="bg-black/60 backdrop-blur-xl border border-white/10 p-4 rounded-3xl flex items-center gap-6 shadow-2xl">
-          <!-- Reps de la série courante -->
-          <div class="text-center">
-            <div class="text-4xl font-black text-yellow-400 leading-none">
-              {{ setRepCount() }}<span class="text-zinc-600 text-2xl">/{{ targetReps() }}</span>
-            </div>
-            <div class="text-[10px] font-bold uppercase text-zinc-500 mt-1">Reps</div>
-          </div>
-          <div class="w-px h-10 bg-zinc-800"></div>
-          <div class="text-center">
-            <div class="text-4xl font-black leading-none">{{ quality() }}%</div>
-            <div class="text-[10px] font-bold uppercase text-zinc-500 mt-1">Score</div>
-          </div>
-        </div>
+        @if (status() === 'ready') {
+          <p class="text-zinc-500 text-xs uppercase tracking-widest">Série {{ currentSet() }} / {{ targetSets() }}</p>
+          <div class="text-yellow-400 font-black text-5xl animate-bounce italic">3...</div>
+        }
 
-        <p class="mt-6 text-center text-sm font-medium text-white bg-black/40 px-6 py-2 rounded-full backdrop-blur-sm">
-          {{ feedback() }}
-        </p>
-      </div>
-    </div>
-
-    <!-- Bottom Controls -->
-    <div class="bg-black p-8 flex flex-col items-center gap-6">
-      @if (status() === 'waiting') {
-        <div class="flex flex-col items-center gap-4 w-full max-w-xs">
-          <!-- Objectif de la série -->
-          <p class="text-zinc-500 text-sm">
-            Objectif : <span class="text-white font-bold">{{ targetReps() }} répétitions</span>
-          </p>
-
-          <!-- Bouton — désactivé tant que modèle IA ET template ne sont pas chargés -->
+        @if (status() === 'active') {
           <button
-            (click)="startAnalysis()"
-            [disabled]="!poseReady || !cameraAvailable() || !templateLoaded()"
-            class="w-20 h-20 rounded-full flex items-center justify-center transition-all"
-            [class.bg-yellow-400]="poseReady && cameraAvailable() && templateLoaded()"
-            [class.text-black]="poseReady && cameraAvailable() && templateLoaded()"
-            [class.shadow-[0_0_30px_rgba(250,204,21,0.4)]]="poseReady && cameraAvailable() && templateLoaded()"
-            [class.hover:scale-105]="poseReady && cameraAvailable() && templateLoaded()"
-            [class.bg-zinc-800]="!poseReady || !cameraAvailable() || !templateLoaded()"
-            [class.text-zinc-600]="!poseReady || !cameraAvailable() || !templateLoaded()"
-            [class.cursor-not-allowed]="!poseReady || !cameraAvailable() || !templateLoaded()"
+            (click)="finishWorkout()"
+            class="bg-red-500/20 border border-red-500/40 text-red-400 px-8 py-3 rounded-2xl font-bold text-sm uppercase tracking-tighter"
           >
-            @if (poseLoading || (!templateLoaded() && !templateError())) {
-              <lucide-icon name="refresh-cw" [size]="32" class="animate-spin"></lucide-icon>
-            } @else {
-              <lucide-icon name="camera" [size]="32"></lucide-icon>
-            }
+            Terminer l'exercice
           </button>
-
-          @if (!cameraAvailable()) {
-            <p class="text-[10px] font-bold uppercase tracking-widest text-red-400">Caméra indisponible</p>
-          } @else if (templateError()) {
-            <p class="text-[10px] font-bold uppercase tracking-widest text-red-400">
-              Modèle de référence indisponible — exercice non analysé
-            </p>
-          } @else if (poseLoading) {
-            <p class="text-[10px] font-bold uppercase tracking-widest text-yellow-400/60 animate-pulse">
-              Chargement du modèle IA...
-            </p>
-          } @else if (!templateLoaded()) {
-            <p class="text-[10px] font-bold uppercase tracking-widest text-yellow-400/60 animate-pulse">
-              Chargement du modèle de référence...
-            </p>
-          } @else if (poseReady) {
-            <p class="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Lancer l'analyse Live</p>
-          } @else {
-            <p class="text-[10px] font-bold uppercase tracking-widest text-red-400">Modèle indisponible</p>
-          }
-        </div>
-      }
-
-      @if (status() === 'ready') {
-        <p class="text-zinc-500 text-xs uppercase tracking-widest">Série {{ currentSet() }} / {{ targetSets() }}</p>
-        <div class="text-yellow-400 font-black text-5xl animate-bounce italic">3...</div>
-      }
-
-      @if (status() === 'active') {
-        <button
-          (click)="finishWorkout()"
-          class="bg-red-500/20 border border-red-500/40 text-red-400 px-8 py-3 rounded-2xl font-bold text-sm uppercase tracking-tighter"
-        >
-          Terminer l'exercice
-        </button>
-      }
-    </div>
-  </div>
-}
-
-<!-- ── Repos entre les séries ─────────────────────────────────────────────── -->
-@if (status() === 'resting') {
-  <div class="fixed inset-0 z-[60] bg-zinc-950 flex flex-col">
-
-    <!-- Header -->
-    <div class="px-6 py-5 flex justify-between items-center">
-      <button
-        (click)="finishWorkout()"
-        class="w-10 h-10 bg-zinc-900 border border-zinc-800 rounded-full flex items-center justify-center text-zinc-500 hover:text-white transition-colors"
-      >
-        <lucide-icon name="x" [size]="20"></lucide-icon>
-      </button>
-      <span class="text-xs font-bold uppercase tracking-widest text-zinc-500">
-        {{ exercise?.name }}
-      </span>
-      <div class="w-10"></div>
-    </div>
-
-    <!-- Progression des séries (dots) -->
-    <div class="flex justify-center gap-2 px-6">
-      @for (i of [].constructor(targetSets()); track $index) {
-        <div
-          class="h-1.5 flex-1 rounded-full transition-colors"
-          [class]="$index < currentSet() ? 'bg-yellow-400' : 'bg-zinc-800'"
-        ></div>
-      }
-    </div>
-
-    <!-- Centre -->
-    <div class="flex-1 flex flex-col items-center justify-center gap-8 px-8">
-
-      <div class="text-center">
-        <p class="text-green-400 font-black text-sm uppercase tracking-widest mb-2">Série {{ currentSet() }} terminée !</p>
-        <p class="text-zinc-500 text-sm">Prochaine : Série {{ currentSet() + 1 }} / {{ targetSets() }}</p>
+        }
       </div>
-
-      <!-- Timer repos -->
-      <div class="relative w-44 h-44">
-        <svg class="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
-          <circle cx="50" cy="50" r="44" fill="none" stroke="#27272a" stroke-width="4"/>
-          <circle
-            cx="50" cy="50" r="44" fill="none"
-            stroke="#facc15" stroke-width="4" stroke-linecap="round"
-            stroke-dasharray="276.5"
-            [attr.stroke-dashoffset]="276.5 - (276.5 * (restElapsed() / 60))"
-            style="transition: stroke-dashoffset 1s linear"
-          />
-        </svg>
-        <div class="absolute inset-0 flex flex-col items-center justify-center">
-          <span class="text-4xl font-black">{{ restFormattedDuration }}</span>
-          <span class="text-[10px] font-bold uppercase text-zinc-500 mt-1">Repos</span>
-        </div>
-      </div>
-
-      <p class="text-zinc-600 text-xs text-center">Repose-toi, puis lance la série suivante quand tu es prêt</p>
-    </div>
-
-    <!-- Bouton lancer la série suivante -->
-    <div class="p-8">
-      <button
-        (click)="startNextSet()"
-        class="w-full bg-yellow-400 py-4 rounded-2xl text-black font-black uppercase tracking-tighter hover:bg-yellow-300 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-      >
-        <lucide-icon name="play" [size]="20"></lucide-icon>
-        Lancer la série {{ currentSet() + 1 }}
-      </button>
-    </div>
-
+    }
   </div>
 }

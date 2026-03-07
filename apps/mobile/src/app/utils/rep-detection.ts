@@ -45,6 +45,7 @@ export interface FrameResult {
   repProgress: number;          // 0.0-1.0
   templateIndex: number;        // 0-99
   angleConformity: Record<string, 'good' | 'close' | 'bad'>;
+  inRep: boolean;               // true quand en phase descente ou montée (pas idle)
 }
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -110,7 +111,7 @@ export function processFrame(
 ): FrameResult {
   const primaryVal = angles[state.primaryAngle];
   if (primaryVal === undefined) {
-    return { repCompleted: false, repScore: 0, repProgress: state.repProgress, templateIndex: 0, angleConformity: {} };
+    return { repCompleted: false, repScore: 0, repProgress: state.repProgress, templateIndex: 0, angleConformity: {}, inRep: false };
   }
 
   // EMA smoothing
@@ -202,9 +203,16 @@ export function processFrame(
   const templateIndex = mapToTemplateIndex(state, val, template);
 
   // ── Per-frame conformity (visual feedback — skeleton colors) ────────────
+  // Only include angles with significant weight (>= 5% of total variation).
+  // This ensures irrelevant joints (e.g. legs in a curl, arms in a squat)
+  // stay neutral gray regardless of exercise.
+  const WEIGHT_THRESHOLD = 0.05;
   const angleConformity: Record<string, 'good' | 'close' | 'bad'> = {};
 
   for (const angleName of Object.keys(template.angles)) {
+    const w = state.angleWeights[angleName] ?? 0;
+    if (w < WEIGHT_THRESHOLD) continue;
+
     const angleVal = angles[angleName];
     if (angleVal === undefined) continue;
 
@@ -232,6 +240,7 @@ export function processFrame(
     repProgress: state.repProgress,
     templateIndex,
     angleConformity,
+    inRep: state.phase !== 'idle',
   };
 }
 
@@ -364,14 +373,18 @@ function computeAngleWeights(template: ExerciseTemplate): Record<string, number>
 }
 
 function mapToTemplateIndex(
-  _state: RepDetectorState,
+  state: RepDetectorState,
   currentValue: number,
   template: ExerciseTemplate,
 ): number {
-  const ref = template.angles[_state.primaryAngle].reference;
-  let bestIdx = 0;
+  const ref = template.angles[state.primaryAngle].reference;
+  // Restrict search range by phase to avoid jumping between descending/ascending
+  const start = state.phase === 'ascending' ? state.valleyIndex : 0;
+  const end   = state.phase === 'descending' ? state.valleyIndex : ref.length - 1;
+
+  let bestIdx = start;
   let bestDist = Infinity;
-  for (let i = 0; i < ref.length; i++) {
+  for (let i = start; i <= end; i++) {
     const dist = Math.abs(ref[i] - currentValue);
     if (dist < bestDist) {
       bestDist = dist;

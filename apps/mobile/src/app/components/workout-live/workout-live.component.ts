@@ -211,8 +211,11 @@ export class WorkoutLiveComponent implements OnInit, OnDestroy {
           this.handleRepCompleted(frameResult.repScore);
         }
 
-        this.drawColoredSkeleton(ctx, landmarks, frameResult.angleConformity);
-        return;
+        // Only color skeleton when user is actively moving (not idle between reps)
+        if (frameResult.inRep && Object.keys(frameResult.angleConformity).length > 0) {
+          this.drawColoredSkeleton(ctx, landmarks, frameResult.angleConformity);
+          return;
+        }
       }
     }
 

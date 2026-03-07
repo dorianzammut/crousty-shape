@@ -1,9 +1,13 @@
 <div class="min-h-screen bg-black text-white overflow-x-hidden">
-  <main class="pb-24">
-    <div class="w-full max-w-md mx-auto px-4 pt-6">
-      <router-outlet />
-    </div>
-  </main>
+  @if (isAuthView) {
+    <router-outlet />
+  } @else {
+    <main class="pb-24">
+      <div class="w-full max-w-md mx-auto px-4 pt-6">
+        <router-outlet />
+      </div>
+    </main>
+  }
 
   @if (showBottomNav) {
     <app-bottom-nav />
