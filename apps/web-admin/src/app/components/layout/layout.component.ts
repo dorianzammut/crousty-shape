@@ -32,6 +32,7 @@ export class LayoutComponent {
       { path: 'dashboard', label: 'Dashboard', icon: 'layout-dashboard' },
       { path: 'users', label: 'Utilisateurs', icon: 'users' },
       { path: 'sessions', label: 'Séances', icon: 'dumbbell' },
+      { path: 'catalogue', label: 'Catalogue', icon: 'book-open' },
       { path: 'settings', label: 'Paramètres', icon: 'settings' },
     ];
   }

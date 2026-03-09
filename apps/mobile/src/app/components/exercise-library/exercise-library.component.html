@@ -18,24 +18,30 @@
       />
     </div>
 
-    <div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-      @for (cat of categories; track cat) {
-        <button
-          (click)="setFilter(cat)"
-          [class]="cat === activeFilter()
-            ? (cat === 'Favoris'
-                ? 'px-4 py-2 rounded-full text-xs font-bold uppercase whitespace-nowrap border transition-all bg-yellow-400 border-yellow-400 text-black flex items-center gap-1.5'
-                : 'px-4 py-2 rounded-full text-xs font-bold uppercase whitespace-nowrap border transition-all bg-yellow-400 border-yellow-400 text-black')
-            : (cat === 'Favoris'
-                ? 'px-4 py-2 rounded-full text-xs font-bold uppercase whitespace-nowrap border transition-all bg-zinc-900 border-zinc-800 text-yellow-400 flex items-center gap-1.5'
-                : 'px-4 py-2 rounded-full text-xs font-bold uppercase whitespace-nowrap border transition-all bg-zinc-900 border-zinc-800 text-zinc-400')"
-        >
-          @if (cat === 'Favoris') {
-            <lucide-icon name="star" [size]="11"></lucide-icon>
-          }
-          {{ cat }}
-        </button>
-      }
+    <div class="flex gap-2">
+      <button
+        (click)="setFilter('Favoris')"
+        [class]="activeFilter() === 'Favoris'
+          ? 'px-4 py-2 rounded-full text-xs font-bold uppercase whitespace-nowrap border transition-all bg-yellow-400 border-yellow-400 text-black flex items-center gap-1.5'
+          : 'px-4 py-2 rounded-full text-xs font-bold uppercase whitespace-nowrap border transition-all bg-zinc-900 border-zinc-800 text-yellow-400 flex items-center gap-1.5'"
+      >
+        <lucide-icon name="star" [size]="11"></lucide-icon>
+        Favoris
+      </button>
+
+      <select
+        [value]="activeFilter() === 'Favoris' ? 'Tous' : activeFilter()"
+        (change)="setFilter($any($event.target).value)"
+        class="flex-1 bg-zinc-900 border border-zinc-800 rounded-full px-4 py-2 text-xs font-bold uppercase text-zinc-400 outline-none transition-colors focus:border-yellow-400 appearance-none"
+        [class.!text-black]="activeFilter() !== 'Tous' && activeFilter() !== 'Favoris'"
+        [class.!bg-yellow-400]="activeFilter() !== 'Tous' && activeFilter() !== 'Favoris'"
+        [class.!border-yellow-400]="activeFilter() !== 'Tous' && activeFilter() !== 'Favoris'"
+      >
+        <option value="Tous">Toutes les catégories</option>
+        @for (cat of categories; track cat.value) {
+          <option [value]="cat.value">{{ cat.label }}</option>
+        }
+      </select>
     </div>
   </div>
 
