@@ -5,6 +5,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { NavigationService } from '../../services/navigation.service';
 import { ExercisesService, Exercise } from '../../services/exercises.service';
 import { FavoritesService } from '../../services/favorites.service';
+import { EXERCISE_CATEGORIES } from '../../constants/exercise-categories';
 
 @Component({
   selector: 'app-exercise-library',
@@ -24,7 +25,7 @@ export class ExerciseLibraryComponent implements OnInit {
   loading = signal(true);
   togglingId = signal<string | null>(null);
 
-  categories = ['Favoris', 'Tous', 'Jambes', 'Pectoraux', 'Dos', 'Épaules', 'Bras'];
+  categories = EXERCISE_CATEGORIES;
 
   filteredExercises = computed(() => {
     const s = this.search().toLowerCase();

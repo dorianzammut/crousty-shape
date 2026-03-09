@@ -9,7 +9,7 @@ import {
   User, UserPlus, Users, Dumbbell, BarChart3, Settings, Bell, Search,
   ArrowUpRight, ChevronRight, AlertCircle, TrendingUp,
   LayoutDashboard, ClipboardList, LogOut, Menu, X,
-  Eye, EyeOff, Trash2, Plus, BookOpen, Upload, Video, Save, Edit,
+  Eye, EyeOff, Trash2, Plus, BookOpen, Upload, Video, Save, Edit, TriangleAlert,
 } from 'lucide-angular';
 import { authInterceptor } from './interceptors/auth.interceptor';
 
@@ -27,7 +27,7 @@ export const appConfig: ApplicationConfig = {
         User, UserPlus, Users, Dumbbell, BarChart3, Settings, Bell, Search,
         ArrowUpRight, ChevronRight, AlertCircle, TrendingUp,
         LayoutDashboard, ClipboardList, LogOut, Menu, X,
-        Eye, EyeOff, Trash2, Plus, BookOpen, Upload, Video, Save, Edit,
+        Eye, EyeOff, Trash2, Plus, BookOpen, Upload, Video, Save, Edit, TriangleAlert,
       })
     }
   ]

@@ -1,7 +1,8 @@
-import { Component, signal, computed, inject, OnInit } from '@angular/core';
+import { Component, signal, computed, inject, OnInit, ChangeDetectorRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { ExercisesService, Exercise } from '../../services/exercises.service';
+import { AuthService } from '../../services/auth.service';
 import { EXERCISE_CATEGORIES, getCategoryLabel } from '../../constants/exercise-categories';
 import { SkeletonPlayerComponent } from '../skeleton-player/skeleton-player.component';
 
@@ -83,17 +84,27 @@ import { SkeletonPlayerComponent } from '../skeleton-player/skeleton-player.comp
                   }
                 </div>
               </div>
-              <div class="flex items-center gap-3">
-                @if (ex.createdBy) {
-                  <p class="text-[11px] text-zinc-500">
-                    Par <span class="text-zinc-400">{{ ex.createdBy.name }}</span>
-                  </p>
-                }
-                @if (ex.videoUrl) {
-                  <span class="flex items-center gap-1 text-[11px] text-yellow-400">
-                    <lucide-icon name="video" [size]="12"></lucide-icon>
-                    Vidéo dispo
-                  </span>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  @if (ex.createdBy) {
+                    <p class="text-[11px] text-zinc-500">
+                      Par <span class="text-zinc-400">{{ ex.createdBy.name }}</span>
+                    </p>
+                  }
+                  @if (ex.videoUrl) {
+                    <span class="flex items-center gap-1 text-[11px] text-yellow-400">
+                      <lucide-icon name="video" [size]="12"></lucide-icon>
+                      Vidéo dispo
+                    </span>
+                  }
+                </div>
+                @if (isAdmin()) {
+                  <button
+                    (click)="openDeleteModal(ex); $event.stopPropagation()"
+                    class="text-zinc-500 hover:text-red-400 transition-colors p-1 rounded-lg hover:bg-red-400/10"
+                    title="Supprimer cet exercice">
+                    <lucide-icon name="trash-2" [size]="16"></lucide-icon>
+                  </button>
                 }
               </div>
             </div>
@@ -159,9 +170,47 @@ import { SkeletonPlayerComponent } from '../skeleton-player/skeleton-player.comp
             }
           </div>
 
-          <div class="pt-2">
-            <button (click)="closeDetailModal()" class="w-full py-2.5 rounded-xl text-sm font-bold bg-zinc-800 text-zinc-400 hover:bg-zinc-700 transition-colors">
+          <div class="pt-2 flex gap-3">
+            @if (isAdmin()) {
+              <button (click)="openDeleteModal(selectedExercise()!); closeDetailModal()" class="flex-1 py-2.5 rounded-xl text-sm font-bold bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors flex items-center justify-center gap-2">
+                <lucide-icon name="trash-2" [size]="16"></lucide-icon>
+                Supprimer
+              </button>
+            }
+            <button (click)="closeDetailModal()" class="flex-1 py-2.5 rounded-xl text-sm font-bold bg-zinc-800 text-zinc-400 hover:bg-zinc-700 transition-colors">
               Fermer
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Delete Confirmation Modal -->
+    @if (showDeleteModal()) {
+      <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center" (click)="closeDeleteModal()">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-sm mx-4 p-6 space-y-4" (click)="$event.stopPropagation()">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center">
+              <lucide-icon name="triangle-alert" [size]="20" class="text-red-400"></lucide-icon>
+            </div>
+            <h3 class="text-lg font-bold">Supprimer l'exercice</h3>
+          </div>
+          <p class="text-sm text-zinc-400">
+            Êtes-vous sûr de vouloir supprimer <span class="text-white font-semibold">{{ exerciseToDelete()?.name }}</span> ? Cette action est irréversible.
+          </p>
+          @if (deleteError()) {
+            <p class="text-sm text-red-400">{{ deleteError() }}</p>
+          }
+          <div class="flex gap-3">
+            <button (click)="closeDeleteModal()" class="flex-1 py-2.5 rounded-xl text-sm font-bold bg-zinc-800 text-zinc-400 hover:bg-zinc-700 transition-colors">
+              Annuler
+            </button>
+            <button
+              (click)="confirmDelete()"
+              [disabled]="deleting()"
+              style="color: white"
+              class="flex-1 py-2.5 rounded-xl text-sm font-bold bg-red-500 hover:bg-red-600 transition-colors disabled:opacity-50">
+              {{ deleting() ? 'Suppression...' : 'Supprimer' }}
             </button>
           </div>
         </div>
@@ -171,6 +220,8 @@ import { SkeletonPlayerComponent } from '../skeleton-player/skeleton-player.comp
 })
 export class CatalogueComponent implements OnInit {
   private exercisesService = inject(ExercisesService);
+  private authService = inject(AuthService);
+  private cdr = inject(ChangeDetectorRef);
 
   exercises = signal<Exercise[]>([]);
   loading = signal(true);
@@ -187,8 +238,16 @@ export class CatalogueComponent implements OnInit {
   showDetailModal = signal(false);
   selectedExercise = signal<Exercise | null>(null);
 
+  // Delete state
+  showDeleteModal = signal(false);
+  exerciseToDelete = signal<Exercise | null>(null);
+  deleting = signal(false);
+  deleteError = signal('');
+
   categories = EXERCISE_CATEGORIES;
   categoryLabel = getCategoryLabel;
+
+  isAdmin = computed(() => this.authService.currentUser()?.role === 'ADMIN');
 
   openDetailModal(ex: Exercise) {
     this.selectedExercise.set(ex);
@@ -200,13 +259,47 @@ export class CatalogueComponent implements OnInit {
     this.selectedExercise.set(null);
   }
 
+  openDeleteModal(ex: Exercise) {
+    this.exerciseToDelete.set(ex);
+    this.deleteError.set('');
+    this.showDeleteModal.set(true);
+  }
+
+  closeDeleteModal() {
+    this.showDeleteModal.set(false);
+    this.exerciseToDelete.set(null);
+    this.deleteError.set('');
+  }
+
+  confirmDelete() {
+    const ex = this.exerciseToDelete();
+    if (!ex) return;
+    this.deleting.set(true);
+    this.deleteError.set('');
+    this.exercisesService.delete(ex.id).subscribe({
+      next: () => {
+        this.exercises.update(list => list.filter(e => e.id !== ex.id));
+        this.deleting.set(false);
+        this.closeDeleteModal();
+      },
+      error: () => {
+        this.deleteError.set('Erreur lors de la suppression. Veuillez réessayer.');
+        this.deleting.set(false);
+      },
+    });
+  }
+
   ngOnInit() {
     this.exercisesService.getAll().subscribe({
       next: exercises => {
         this.exercises.set(exercises);
         this.loading.set(false);
+        this.cdr.detectChanges();
       },
-      error: () => this.loading.set(false),
+      error: () => {
+        this.loading.set(false);
+        this.cdr.detectChanges();
+      },
     });
   }
 }
